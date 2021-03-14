@@ -1,0 +1,147 @@
+{
+    "identifier": "maxgrafik.DocBlockr",
+    "name": "DocBlockr",
+    "organization": "Hendrik Meinl",
+    "description": "Nova extension to make writing documentation easier",
+    "version": "0.1",
+    "categories": ["completions"],
+    "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
+    "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
+    "license": "MIT",
+    
+    "main": "main.js",
+    
+    "activationEvents": [
+        "onLanguage:javascript",
+        "onLanguage:typescript",
+        "onLanguage:php"
+    ],
+
+    "config": [
+        {
+            "key": "maxgrafik.DocBlockr.config.sectionMain",
+            "title": "Settings",
+            "description": "Enable DocBlockr for the following languages:",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.config.enableJS",
+                    "title": "JavaScript",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.enableTS",
+                    "title": "TypeScript",
+                    "type": "boolean",
+                    "default": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.enablePHP",
+                    "title": "PHP",
+                    "type": "boolean",
+                    "default": true
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.DocBlockr.config.sectionFormat",
+            "title": "Format Settings",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.config.addEmptyLineJS",
+                    "title": "JavaScript",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "default": 0,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.addEmptyLineTS",
+                    "title": "TypeScript",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "default": 0,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.addEmptyLinePHP",
+                    "title": "PHP",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "default": 2,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.alignTags",
+                    "title": "Align Tags",
+                    "type": "enum",
+                    "values": [[0, "Don’t align tags"], [1, "Shallow"], [3, "Deep"]],
+                    "default": 0
+                }
+            ]
+        }
+    ],
+    
+    "configWorkspace": [
+        {
+            "key": "maxgrafik.DocBlockr.workspace.sectionMain",
+            "title": "Workspace Settings",
+            "description": "Enable DocBlockr for the following languages:",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enableJS",
+                    "title": "JavaScript",
+                    "type": "boolean"
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enableTS",
+                    "title": "TypeScript",
+                    "type": "boolean"
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enablePHP",
+                    "title": "PHP",
+                    "type": "boolean"
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.DocBlockr.workspace.sectionFormat",
+            "title": "Format Settings",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.addEmptyLineJS",
+                    "title": "JavaScript",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.addEmptyLineTS",
+                    "title": "TypeScript",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.addEmptyLinePHP",
+                    "title": "PHP",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.alignTags",
+                    "title": "Align Tags",
+                    "type": "enum",
+                    "values": [[0, "Don’t align tags"], [1, "Shallow"], [3, "Deep"]],
+                }
+            ]
+        }
+    ]
+
+}

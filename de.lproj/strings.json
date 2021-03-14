@@ -1,0 +1,13 @@
+{
+    "Settings": "Einstellungen",
+    "Workspace Settings": "Projekt Einstellungen",
+    "Enable DocBlockr for the following languages:": "DocBlockr für die folgenden Sprachen verwenden:",
+    "Format Settings": "Formatierung",
+    "Add empty line after summary": "Leerzeile nach Beschreibung",
+    "Add empty line between sections": "Leerzeile zwischen Abschnitten",
+    "Don’t add empty lines": "Keine Leerzeilen einfügen",
+    "Align Tags": "Tag Ausrichtung",
+    "Don’t align tags": "Ohne",
+    "Shallow": "Nur Schlüsselwörter",
+    "Deep": "Alles"
+}
