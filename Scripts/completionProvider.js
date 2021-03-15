@@ -10,7 +10,12 @@ class CompletionProvider {
 
     provideCompletionItems(editor, context) {
 
-        let syntax = editor.document.syntax;
+        // skip if multiple cursors
+        if (editor.selectedRanges.length > 1) {
+            return [];
+        }
+
+        const syntax = editor.document.syntax;
         
         // skip if not enabled for language
         if (syntax === "javascript" && !this.config.enableJS) {
@@ -24,28 +29,16 @@ class CompletionProvider {
         }
 
         // skip if not trigger chars
-        let line = context.line;
-        if (!line.trim().endsWith("/**")) {
+        const line = context.line.trim();
+        if (!line.endsWith("/**") && !line.match(/^\*\s+@/)) {
             return [];
         }
 
-        // skip if multiple cursors
-        if (editor.selectedRanges.length > 1) {
-            return [];
-        }
-
-        let cursorPosition = context.position;
+        const cursorPosition = context.position;
 
         // return inline comment if line contains not only trigger chars
-        if (line.trim() !== "/**") {
+        if (line.endsWith("/**") && line !== "/**") {
             return this.provideInlineComment(cursorPosition);
-        }
-
-        let text = editor.getTextInRange(new Range(cursorPosition, editor.document.length));
-        
-        let nextLine = text.match(/^[\t ]*(.+)$/m);
-        if (!nextLine) { // end of file
-            return this.provideBlockComment(cursorPosition);
         }
 
         let parser;
@@ -64,9 +57,23 @@ class CompletionProvider {
             return [];
         }
 
+        // provide tag completion if "@"
+        if (line.match(/^\*\s+@/)) {
+            const matches = parser.getDocTags(line);
+            return this.provideTags(matches);
+        }
+
+        const text = editor.getTextInRange(new Range(cursorPosition, editor.document.length));
+        
+        // provide block comment if EOF
+        const nextLine = text.match(/^[\t ]*(.+)$/m);
+        if (!nextLine) {
+            return this.provideBlockComment(cursorPosition);
+        }
+
         // split text into lines and get closest definition
-        let lines = text.split(editor.document.eol);
-        let definition = parser.getDefinition(lines);
+        const lines = text.split(editor.document.eol);
+        const definition = parser.getDefinition(lines);
 
         // provide block comment if no definition
         if (definition === "") {
@@ -75,7 +82,7 @@ class CompletionProvider {
 
         // parse definition and get formatted docblock
         // provide block comment if no docblock returned
-        let snippet = parser.getDocBlock(definition, this.config);
+        const snippet = parser.getDocBlock(definition, this.config);
         if (!snippet) {
             return this.provideBlockComment(cursorPosition);
         }
@@ -113,6 +120,19 @@ class CompletionProvider {
         return [item];
     }
 
+    /**
+     * Returns matching doc tags
+     */
+    provideTags(matches) {
+        let items = [];
+        matches.forEach(match => {
+            let item = new CompletionItem(match[0], CompletionItemKind.StyleDirective);
+            item.insertText = match[0] + (match[1] ? " " + match[1] : "");
+            item.insertTextFormat = InsertTextFormat.Snippet;
+            items.push(item);
+        });
+        return items;
+    }
 }
 
 module.exports = CompletionProvider;

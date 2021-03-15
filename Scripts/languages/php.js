@@ -144,6 +144,52 @@ class PHPParser extends LanguageParser {
         return [line, null, null];
     }
 
+    getDocTags(line) {
+        const tags = [
+            ["api", ""],
+            ["author", "${0:name} ${1:email}"],
+            ["deprecated", "${0:version} ${1:description}"],
+            ["copyright", "${0:description}"],
+            ["example", "${0:example}"],
+            ["filesource", ""],
+            ["ignore", "${0:description}"],
+            ["internal", "${0:description}"],
+            ["license", "${0:name}"],
+            ["link", "${0:URI} ${1:description}"],
+            ["method", "${0:description}"],
+            ["package", "${0:description}"],
+            ["param", "${0:type} ${1:name} ${2:description}"],
+            ["property", "${0:type} ${1:name} ${2:description}"],
+            ["return", "${0:type} ${1:description}"],
+            ["see", "${0:URI|FQSEN} ${1:description}"],
+            ["since", "${0:version} ${1:description}"],
+            ["throws", "${0:type} ${1:description}"],
+            ["todo", "${0:description}"],
+            ["uses", "${0:FQSEN} ${1:description}"],
+            ["var", "${0:type}"],
+            ["version", "${0:version} ${1:description}"]
+        ];
+
+        let regex = new RegExp(
+            "^\\*\\s+@(?<tag>.*)"
+        );
+
+        let match = regex.exec(line);
+        if (!match) {
+            return [];
+        }
+
+        let matches = [];
+        let typed = match.groups.tag;
+        
+        tags.forEach(tag => {
+            if (tag[0].substr(0, typed.length) === typed) {
+                matches.push(tag);
+            }
+        });
+
+        return matches;
+    }
 }
 
 module.exports = PHPParser;

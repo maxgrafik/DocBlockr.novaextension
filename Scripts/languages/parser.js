@@ -159,12 +159,17 @@ class LanguageParser {
         let out = [];
         let tabOffset = 0;
 
+        if (this.isStatement(name)) {
+            return null;
+        }
+
         out.push(["${0:summary}"]);
 
-        if (type === "member" || type === "getter") {
-            tabOffset++;
-            out.push(["@memberof ${" + tabOffset + ":parent}"]);
-        }
+        // disabled for now - haven't really seen this in the wild
+        // if (type === "member" || type === "getter") {
+        //     tabOffset++;
+        //     out.push(["@memberof ${" + tabOffset + ":parent}"]);
+        // }
 
         // if there are arguments, add a @param for each
         if (args) {
@@ -227,6 +232,10 @@ class LanguageParser {
 
     formatVar(name, type, value) {
         let out = [];
+
+        if (this.isStatement(name)) {
+            return null;
+        }
 
         if (!type) {
             type = this.guessTypeFromValue(value) || this.guessTypeFromName(name) || "type";
@@ -369,6 +378,20 @@ class LanguageParser {
         return null;
     }
 
+    /**
+     * false positives
+     * statements which look like functions to docblockr
+     */
+    isStatement(name) {
+        const statements = [
+            "for",
+            "foreach",
+            "if",
+            "switch",
+            "while"
+        ];
+        return statements.includes(name);
+    }
 }
 
 module.exports = LanguageParser;
