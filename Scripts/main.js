@@ -1,6 +1,6 @@
 const CompletionProvider = require("completionProvider.js");
 
-let config = {
+const config = {
     enableJS  : true,
     enableTS  : false,
     enablePHP : true,
@@ -14,19 +14,18 @@ exports.activate = function() {
 
     Object.keys(config).forEach(key => {
         /**
-         * Get workspace config - if none is set, get current from global and update
-         * BUG: Does not work as expected :P
+         * Get workspace config - if none is set, get current from global
          */
         config[key] = nova.workspace.config.get("maxgrafik.DocBlockr.workspace."+key);
         if (config[key] === null) {
             config[key] = nova.config.get("maxgrafik.DocBlockr.config."+key);
-            nova.workspace.config.set("maxgrafik.DocBlockr.workspace."+key, config[key]);
         }
 
         /**
          * Register listeners for config changes
          */
-        nova.workspace.config.onDidChange("maxgrafik.DocBlockr.workspace."+key, setConfig, key);
+        nova.workspace.config.onDidChange("maxgrafik.DocBlockr.workspace."+key, updateConfigFromWorkspace, key);
+        nova.config.onDidChange("maxgrafik.DocBlockr.config."+key, updateConfigFromGlobal, key);
     });
 
 }
@@ -36,10 +35,22 @@ exports.deactivate = function() {
 }
 
 nova.assistants.registerCompletionAssistant(["javascript", "typescript", "php"], new CompletionProvider(config), {
-    triggerChars: new Charset("*")
+    triggerChars: new Charset("*@")
 });
 
-function setConfig(newVal) {
-    let key = this;
-    config[key] = newVal;
+function updateConfigFromWorkspace(newVal) {
+    const key = this;
+    if (newVal === null) {
+        config[key] = nova.config.get("maxgrafik.DocBlockr.config."+key);
+    } else {
+        config[key] = newVal;
+    }
+}
+
+function updateConfigFromGlobal(newVal) {
+    const key = this;
+    const workspaceConfig = nova.workspace.config.get("maxgrafik.DocBlockr.workspace."+key);
+    if (workspaceConfig === null) {
+        config[key] = newVal;
+    }
 }
