@@ -1,4 +1,5 @@
 const CompletionProvider = require("completionProvider.js");
+const CommandHandler = require("commandHandler.js");
 
 const config = {
     enableJS  : true,
@@ -34,9 +35,33 @@ exports.deactivate = function() {
     // Clean up state before the extension is deactivated
 }
 
+/**
+ * Register Completion Assistant
+ */
+
 nova.assistants.registerCompletionAssistant(["javascript", "typescript", "php"], new CompletionProvider(config), {
     triggerChars: new Charset("*@")
 });
+
+
+/**
+ * Register Command Handlers
+ */
+
+nova.commands.register("insertDocBlock", editor => {
+    const handler = new CommandHandler(config);
+    handler.insertDocBlock(editor);
+});
+
+nova.commands.register("formatDocBlock", editor => {
+    const handler = new CommandHandler(config);
+    handler.formatDocBlock(editor);
+});
+
+
+/**
+ * Helper functions
+ */
 
 function updateConfigFromWorkspace(newVal) {
     const key = this;

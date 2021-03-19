@@ -3,8 +3,8 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.2",
-    "categories": ["completions"],
+    "version": "0.3",
+    "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
     "license": "MIT",
@@ -17,6 +17,27 @@
         "onLanguage:php"
     ],
 
+    "commands": {
+        "editor": [
+            {
+                "title": "Insert DocBlock",
+                "command": "insertDocBlock",
+                "when": "editorHasFocus && !editorHasSelection",
+                "filters": {
+                    "syntaxes": ["javascript", "typescript", "php"]
+                }
+            },
+            {
+                "title": "Format DocBlock",
+                "command": "formatDocBlock",
+                "when": "editorHasFocus",
+                "filters": {
+                    "syntaxes": ["javascript", "typescript", "php"]
+                }
+            }
+        ]
+    },
+    
     "config": [
         {
             "key": "maxgrafik.DocBlockr.config.sectionMain",
