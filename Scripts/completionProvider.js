@@ -2,6 +2,10 @@ const JavaScriptParser = require("languages/javascript.js");
 const TypeScriptParser = require("languages/typescript.js");
 const PHPParser = require("languages/php.js");
 
+/**
+ * Completion Provider
+ */
+
 class CompletionProvider {
 
     constructor(config) {
@@ -9,6 +13,8 @@ class CompletionProvider {
     }
 
     provideCompletionItems(editor, context) {
+
+        this.config.eol = editor.document.eol;
 
         // skip if multiple cursors
         if (editor.selectedRanges.length > 1) {
@@ -28,17 +34,18 @@ class CompletionProvider {
             return [];
         }
 
-        // skip if not trigger chars
         const line = context.line.trim();
+
+        // skip if not trigger chars
         if (!line.endsWith("/**") && !line.match(/^\*\s+@/)) {
             return [];
         }
 
         const cursorPosition = context.position;
 
-        // return inline comment if line contains not only trigger chars
+        // return inline comment if line NOT only contains trigger chars
         if (line.endsWith("/**") && line !== "/**") {
-            return this.provideInlineComment(cursorPosition);
+            return [this.provideInlineComment(cursorPosition)];
         }
 
         let parser;
@@ -63,12 +70,13 @@ class CompletionProvider {
             return this.provideTags(matches);
         }
 
+        let completionItems = [];
+
         const text = editor.getTextInRange(new Range(cursorPosition, editor.document.length));
-        
+
         // provide block comment if EOF
-        const nextLine = text.match(/^[\t ]*(.+)$/m);
-        if (!nextLine) {
-            return this.provideBlockComment(cursorPosition);
+        if (!text.match(/^[\t ]*(.+)$/m)) {
+            return [this.provideBlockComment(cursorPosition)];
         }
 
         // split text into lines and get closest definition
@@ -77,51 +85,84 @@ class CompletionProvider {
 
         // provide block comment if no definition
         if (definition === "") {
-            return this.provideBlockComment(cursorPosition);
+            completionItems.push(
+                this.provideBlockComment(cursorPosition)
+            );
         }
 
-        // parse definition and get formatted docblock
-        // provide block comment if no docblock returned
-        const snippet = parser.getDocBlock(definition, this.config);
-        if (!snippet) {
-            return this.provideBlockComment(cursorPosition);
+        // parse and get formatted docblock if definition
+        if (definition !== "") {
+            const snippet = parser.getDocBlock(definition, this.config);
+            if (!snippet) {
+                // provide block comment if no snippet returned
+                completionItems.push(
+                    this.provideBlockComment(cursorPosition)
+                );
+            } else {
+                // we finally have a formatted docblock, yay!
+                let item = new CompletionItem("/** DocBlock */", CompletionItemKind.StyleDirective);
+                item.insertText = snippet;
+                item.insertTextFormat = InsertTextFormat.Snippet;
+                item.documentation = "Insert a code documentation block";
+                item.range = new Range(
+                    Math.max(0, cursorPosition-3),
+                    cursorPosition
+                );
+                completionItems.push(item);
+            }
         }
 
-        // we finally have a formatted docblock
-        let item = new CompletionItem("/** DocBlock */", CompletionItemKind.StyleDirective);
-        item.insertText = snippet;
-        item.insertTextFormat = InsertTextFormat.Snippet;
-        item.documentation = "Inserts a code documentation block";
-        item.range = new Range(cursorPosition-3, cursorPosition);
-        return [item];
+        const prePos  = Math.max(0, cursorPosition-3);
+        const preText = editor.getTextInRange(new Range(0, prePos)).trim();
+
+        // provide file/header block if start of file
+        if (preText === "" || preText === "<?php") {
+            completionItems.push(
+                this.provideFileBlock(cursorPosition)
+            );
+        }
+
+        return completionItems;
     }
 
     /**
-     * Returns an inline comment
-     * @param {number} cursorPosition - to calc the replacement range
+     * Provide inline comment  
+     * @param   {number} cursorPosition - to calc the replacement range  
+     * @returns {CompletionItem}
      */
     provideInlineComment(cursorPosition) {
         let item = new CompletionItem("/** comment */", CompletionItemKind.StyleDirective);
         item.insertText = "/** ${0:comment} */";
         item.insertTextFormat = InsertTextFormat.Snippet;
-        item.range = new Range(cursorPosition-3, cursorPosition);
-        return [item];
+        item.range = new Range(
+            Math.max(0, cursorPosition-3),
+            cursorPosition
+        );
+        return item;
     }
 
     /**
-     * Returns a block comment
-     * @param {number} cursorPosition - to calc the replacement range
+     * Provide block comment  
+     * @param   {number} cursorPosition - to calc the replacement range  
+     * @returns {CompletionItem}
      */
     provideBlockComment(cursorPosition) {
         let item = new CompletionItem("/** comment */", CompletionItemKind.StyleDirective);
-        item.insertText = "/**\n * ${0:comment}\n */";
+        item.insertText = 
+            "/**" + this.config.eol +
+            " * ${0:comment}" + this.config.eol + 
+            " */";
         item.insertTextFormat = InsertTextFormat.Snippet;
-        item.range = new Range(cursorPosition-3, cursorPosition);
-        return [item];
+        item.range = new Range(
+            Math.max(0, cursorPosition-3),
+            cursorPosition
+        );
+        return item;
     }
 
     /**
-     * Returns matching doc tags
+     * Provide matching doc tags
+     * @returns {Array}
      */
     provideTags(matches) {
         let items = [];
@@ -133,6 +174,29 @@ class CompletionProvider {
         });
         return items;
     }
+
+    /**
+     * Provide file/header comment
+     * @param   {Number} cursorPosition - to calc the replacement range
+     * @returns {CompletionItem}
+     */
+    provideFileBlock(cursorPosition) {
+        let item = new CompletionItem("/** Header */", CompletionItemKind.StyleDirective);
+
+        // TODO: augment with user configurable tags (e.g. author, copyright)
+        item.insertText = 
+            "/**" + this.config.eol +
+            " * ${0:summary}" + this.config.eol + 
+            " */";
+        item.insertTextFormat = InsertTextFormat.Snippet;
+        item.documentation = "Insert a file documentation block";
+        item.range = new Range(
+            Math.max(0, cursorPosition-3),
+            cursorPosition
+        );
+        return item;
+    }
+
 }
 
 module.exports = CompletionProvider;

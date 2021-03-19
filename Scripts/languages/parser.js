@@ -52,27 +52,135 @@ class LanguageParser {
         return definition;
     }
 
-    getDocBlock(line, config) {
-        let docBlock = this.parse(line);
+    getDocBlock(definition, config) {
+        let docBlock = this.parseDefinition(definition);
         if (!docBlock) {
             return null;
         }
+        return this.formatDocBlock(docBlock, config);
+    }
     
+    parseDefinition(definition) {
+        let result;
+
+        result = this.parseClass(definition);  // (name, extends)
+        if (result) {
+            return this.formatClass(...result);
+        }
+
+        result = this.parseFunction(definition);  // (name, type, args, returnType)
+        if (result) {
+            return this.formatFunction(...result);
+        }
+
+        result = this.parseVar(definition);  // (name, type, value)
+        if (result) {
+            return this.formatVar(...result);
+        }
+
+        return null;
+    }
+
+    parseDocBlock(docBlock) {
+        let out = [];
+        let keywords = ["@param", "property", "@return", "@returns", "throws", "yields"];
+    
+        // de-indent and strip all comment markers
+        docBlock = docBlock
+            .replace(/^[\t ]*\/\*\*[\t ]*$/m, "")
+            .replace(/^[\t ]*\*\/[\t ]*/m, "")
+            .replace(/^[\t ]*\*[\t ]*/gm, "")
+            .trim();
+
+        if (docBlock === "") {
+            return null;
+        }
+
+        let regex = new RegExp(
+            // find either a text line, a tag line or an empty line
+            "(?<text>^[^@\\n\\r].+?$)|(?<tag>^@.+?$)|(?<empty>^$)"
+        , "gm");
+
+        const matches = docBlock.matchAll(regex);
+        if (!matches) {
+            return null;
+        }
+
+        // add continuations to preceding line
+        let lines = [];
+        for (const match of matches) {
+            let text = match.groups.text || false;
+            let tag  = match.groups.tag  || false;
+
+            let lastIdx = lines.length-1;
+            if (lastIdx < 0 || lines[lastIdx] === "") {
+                lines.push(text || tag || "");
+            } else if (tag) {
+                lines.push(tag);
+            } else if (text) {
+                lines[lastIdx] = lines[lastIdx] + " " + text;
+            }
+        }
+
+        regex = new RegExp(
+            "^(?<tag>@[^\\s]+)?" +
+            "(?:\\s*(?<remainder>.+))?$"
+        );
+    
+        lines.forEach(line => {
+            let matches = regex.exec(line);
+            if (line && matches) {
+                let tag = matches.groups.tag;
+                let remainder = matches.groups.remainder
+                    .replace(/\t/g, " ")
+                    .replace(/\s{2,}/g, " ");
+
+                if (!tag) {
+                    out.push([remainder]);
+
+                } else if (keywords.indexOf(tag) < 0) {
+                    out.push([tag, remainder]);
+
+                } else if (keywords.indexOf(tag) > -1) {
+                    let splits = remainder.split(" ");
+                    let type = splits[0];
+                    let arg = splits[1];
+                    let desc = splits.slice(2).join(" ");
+                    if (arg === "-") {
+                        arg = "";
+                    }
+                    if (desc.charAt(0) === "-") {
+                        desc = desc.slice(2);
+                    }
+                    out.push([
+                        tag,
+                        type || "",
+                        arg  || "",
+                        desc || ""
+                    ]);
+                }
+            }
+        });
+
+        return out;
+    }
+
+    formatDocBlock(docBlock, config) {
         let alignTags = config.alignTags;
         let maxLength = [0, 0, 0, 0];
 
         /**
-         * Calculate max length of each column
-         * Strip nova placeholders and leading backslash escapes
+         * Calculate max width of each column
+         * Strip Nova placeholders and leading backslash escapes
          */
         if (alignTags > 0) {
             docBlock.forEach(entry => {
-                if (entry.length > 1) {
-                    entry.forEach((e, idx) => {
+                entry.forEach((e, idx) => {
+                    if (entry.length > 2 || (entry.length === 2 && idx === 0)) {
                         e = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
                         maxLength[idx] = Math.max(maxLength[idx], e.length);
-                    });
-                }
+                    }
+                });
             });
         }
 
@@ -94,7 +202,7 @@ class LanguageParser {
         }
 
         /* create snippet */
-        let snippet = "/**\n";
+        let snippet = "/**" + config.eol;
         docBlock.forEach((entry, index) => {
 
             snippet += " *";
@@ -106,15 +214,15 @@ class LanguageParser {
                     snippet += "".padEnd(padding);
                 }
             });
-            snippet += "\n";
+            snippet += config.eol;
 
             if (addEmptyLine > 0 && index === 0 && docBlock.length > 1) {
-                snippet += " *\n";
+                snippet += " *" + config.eol;
 
             } else if (addEmptyLine === 2 && index < docBlock.length-1) {
                 let nextTag = docBlock[index+1][0];
                 if (nextTag !== entry[0]) {
-                    snippet += " *\n";
+                    snippet += " *" + config.eol;
                 }
             }
 
@@ -124,25 +232,42 @@ class LanguageParser {
         return snippet;
     }
 
-    parse(line) {
-        let result;
+    wrapDocBlock(docBlock, indent, config) {
+        let out = "";
 
-        result = this.parseClass(line);  // (name, extends)
-        if (result) {
-            return this.formatClass(...result);
+        let lines = docBlock.split(config.eol);
+        for (const line of lines) {
+            
+            if (line === "/**" || line === " */") {
+                out += indent + line + config.eol;
+                continue;
+            }
+
+            let tagPart;
+            let txtPart;
+
+            let match = line.match(/^(\s\*\s+@(?:[^ ]+\s+){3}(?:-\s)?)(.+)$/);
+            if (match) {
+                tagPart = match[1];
+                txtPart = match[2];
+            } else {
+                tagPart = " * ";
+                txtPart = line.slice(3);
+            }
+
+            let tmp = indent + tagPart;
+            let words = txtPart.split(" ");
+            words.forEach(word => {
+                if (tmp.length + word.length <= config.WrapGuideColumn) {
+                    tmp += word + " ";
+                } else {
+                    out += tmp.replace(/\s+$/, "") + config.eol;
+                    tmp = indent + " * ".padEnd(tagPart.length) + word + " ";
+                }
+            });
+            out += tmp.replace(/\s+$/, "") + config.eol;
         }
-
-        result = this.parseFunction(line);  // (name, type, args, returnType)
-        if (result) {
-            return this.formatFunction(...result);
-        }
-
-        result = this.parseVar(line);  // (name, type, value)
-        if (result) {
-            return this.formatVar(...result);
-        }
-
-        return null;
+        return out.replace(/\s+$/, "");
     }
 
     formatClass(name, superClass) {
@@ -180,7 +305,7 @@ class LanguageParser {
             let parsedArgs = this.parseArgs(args);
 
             parsedArgs.forEach(arg => {
-                let name = arg[0].charAt(0) === "$" ? "\\$" + arg[0].slice(1) : arg[0];
+                let name = (arg[0].charAt(0) === "$" ? "\\" : "") + arg[0];
                 let type = arg[1];
                 let value = arg[2];
 

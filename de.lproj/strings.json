@@ -12,5 +12,10 @@
     "Align Tags": "Tag Ausrichtung",
     "Don’t align tags": "Ohne",
     "Shallow": "Nur Schlüsselwörter",
-    "Deep": "Alles"
+    "Deep": "Alles",
+    "Insert DocBlock": "Kommentar einfügen",
+    "Format DocBlock": "Kommentare formatieren",
+    "Do you want to format all DocBlocks in this document?": "Sollen alle Kommentare im Dokument formatiert werden?",
+    "Format All": "Alle formatieren",
+    "Cancel": "Abbrechen"
 }
