@@ -118,7 +118,7 @@ class CompletionProvider {
         // provide file/header block if start of file
         if (preText === "" || preText === "<?php") {
             completionItems.push(
-                this.provideFileBlock(cursorPosition)
+                this.provideFileBlock(cursorPosition, parser)
             );
         }
 
@@ -177,17 +177,56 @@ class CompletionProvider {
 
     /**
      * Provide file/header comment
-     * @param   {Number} cursorPosition - to calc the replacement range
+     * @param   {Number}         cursorPosition - to calc the replacement range
+     * @param   {LanguageParser} parser         - to format docBlock
      * @returns {CompletionItem}
      */
-    provideFileBlock(cursorPosition) {
-        let item = new CompletionItem("/** Header */", CompletionItemKind.StyleDirective);
+    provideFileBlock(cursorPosition, parser) {
+        let docBlock = [];
+        let regex = new RegExp(
+            "^(?<tag>@[^\\s]+)?" +
+            "(?:\\s*(?<remainder>.+))?$"
+        );
+        
+        docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
 
-        // TODO: augment with user configurable tags (e.g. author, copyright)
-        item.insertText = 
-            "/**" + this.config.eol +
-            " * ${0:summary}" + this.config.eol + 
-            " */";
+        if (this.config.customTags && this.config.customTags.length) {
+            this.config.customTags.forEach(tag => {
+                let match = regex.exec(tag);
+                if (!match) {
+                    docBlock.push([tag]);
+
+                } else if (match && match.groups.remainder) {
+                    docBlock.push([match.groups.tag, match.groups.remainder]);
+
+                } else if (match && !match.groups.remainder) {
+                    let docTags = parser.getDocTags("* " + match.groups.tag);
+                    if (docTags.length > 0) {
+                        docBlock.push(["@"+docTags[0][0], docTags[0][1]]);
+                    } else {
+                        docBlock.push([tag]);
+                    }
+                }
+            });
+        }
+
+        let tabStop = 0;
+        docBlock.forEach((row, rowIdx) => {
+            row.forEach((col, colIdx) => {
+                docBlock[rowIdx][colIdx] = docBlock[rowIdx][colIdx]
+                    // why oh why no positive lookbehind JavaScript?!
+                    //.replaceAll(/(?<=\$\{)\d+(?=:)/g, () => tabStop++);
+                    .replaceAll(/\$\{\d+:/g, () => "${"+(tabStop++)+":");
+            });
+        });
+        
+        let snippet = parser.formatDocBlock(docBlock, this.config);
+        if (!snippet) {
+            snippet = "/** ${WORKSPACE_NAME} - ${FILENAME} */";
+        }
+
+        let item = new CompletionItem("/** Header */", CompletionItemKind.StyleDirective);
+        item.insertText = snippet;
         item.insertTextFormat = InsertTextFormat.Snippet;
         item.documentation = "Insert a file documentation block";
         item.range = new Range(

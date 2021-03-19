@@ -83,7 +83,7 @@ class LanguageParser {
 
     parseDocBlock(docBlock) {
         let out = [];
-        let keywords = ["@param", "property", "@return", "@returns", "throws", "yields"];
+        let keywords = ["@param", "@property", "@return", "@returns", "@throws", "@yields"];
     
         // de-indent and strip all comment markers
         docBlock = docBlock

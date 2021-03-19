@@ -1,3 +1,9 @@
+## Version 0.4
+
+* Custom tags for header blocks (global and per workspace)
+* bug fixes
+
+
 ## Version 0.3
 
 * Better handling of different line endings

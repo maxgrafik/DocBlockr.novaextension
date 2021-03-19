@@ -29,6 +29,11 @@ exports.activate = function() {
         nova.config.onDidChange("maxgrafik.DocBlockr.config."+key, updateConfigFromGlobal, key);
     });
 
+    updateCustomTags();
+
+    nova.workspace.config.onDidChange("maxgrafik.DocBlockr.workspace.useWorkspaceTags", updateCustomTags);
+    nova.workspace.config.onDidChange("maxgrafik.DocBlockr.workspace.customTags", updateCustomTags);
+    nova.config.onDidChange("maxgrafik.DocBlockr.config.customTags", updateCustomTags);
 }
 
 exports.deactivate = function() {
@@ -77,5 +82,14 @@ function updateConfigFromGlobal(newVal) {
     const workspaceConfig = nova.workspace.config.get("maxgrafik.DocBlockr.workspace."+key);
     if (workspaceConfig === null) {
         config[key] = newVal;
+    }
+}
+
+function updateCustomTags() {
+    const useWorkspaceTags = nova.workspace.config.get("maxgrafik.DocBlockr.workspace.useWorkspaceTags");
+    if (useWorkspaceTags === null) {
+        config.customTags = nova.config.get("maxgrafik.DocBlockr.config.customTags");
+    } else {
+        config.customTags = nova.workspace.config.get("maxgrafik.DocBlockr.workspace.customTags");
     }
 }
