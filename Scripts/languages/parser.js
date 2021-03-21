@@ -52,14 +52,6 @@ class LanguageParser {
         return definition;
     }
 
-    getDocBlock(definition, config) {
-        let docBlock = this.parseDefinition(definition);
-        if (!docBlock) {
-            return null;
-        }
-        return this.formatDocBlock(docBlock, config);
-    }
-    
     parseDefinition(definition) {
         let result;
 
@@ -166,6 +158,7 @@ class LanguageParser {
     }
 
     formatDocBlock(docBlock, config) {
+        let out = [];
         let alignTags = config.alignTags;
         let maxLength = [0, 0, 0, 0];
 
@@ -201,45 +194,43 @@ class LanguageParser {
             break;
         }
 
-        /* create snippet */
-        let snippet = "/**" + config.eol;
+        out.push("/**");
         docBlock.forEach((entry, index) => {
 
-            snippet += " *";
+            let line = " *";
             entry.forEach((e, idx) => {
-                snippet += (idx === 3 ? descSep : " ") + e;
+                line += (idx === 3 ? descSep : " ") + e;
                 if (alignTags > idx) {
                     let text = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
                     let padding = maxLength[idx] - text.length;
-                    snippet += "".padEnd(padding);
+                    line += "".padEnd(padding);
                 }
             });
-            snippet += config.eol;
+            out.push(line.replace(/\s+$/, ""));
 
             if (addEmptyLine > 0 && index === 0 && docBlock.length > 1) {
-                snippet += " *" + config.eol;
+                out.push(" *");
 
             } else if (addEmptyLine === 2 && index < docBlock.length-1) {
                 let nextTag = docBlock[index+1][0];
                 if (nextTag !== entry[0]) {
-                    snippet += " *" + config.eol;
+                    out.push(" *");
                 }
             }
 
         });
-        snippet += " */";
+        out.push(" */");
 
-        return snippet;
+        return out;
     }
 
-    wrapDocBlock(docBlock, indent, config) {
-        let out = "";
+    wrapLines(lines, wrapWidth) {
+        let out = [];
 
-        let lines = docBlock.split(config.eol);
         for (const line of lines) {
             
             if (line === "/**" || line === " */") {
-                out += indent + line + config.eol;
+                out.push(line);
                 continue;
             }
 
@@ -255,19 +246,19 @@ class LanguageParser {
                 txtPart = line.slice(3);
             }
 
-            let tmp = indent + tagPart;
+            let tmp = tagPart;
             let words = txtPart.split(" ");
             words.forEach(word => {
-                if (tmp.length + word.length <= config.WrapGuideColumn) {
+                if (tmp.length + word.length <= wrapWidth) {
                     tmp += word + " ";
                 } else {
-                    out += tmp.replace(/\s+$/, "") + config.eol;
-                    tmp = indent + " * ".padEnd(tagPart.length) + word + " ";
+                    out.push(tmp.replace(/\s+$/, ""));
+                    tmp = " * ".padEnd(tagPart.length) + word + " ";
                 }
             });
-            out += tmp.replace(/\s+$/, "") + config.eol;
+            out.push(tmp.replace(/\s+$/, ""));
         }
-        return out.replace(/\s+$/, "");
+        return out;
     }
 
     formatClass(name, superClass) {

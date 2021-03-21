@@ -26,7 +26,6 @@ class CommandHandler {
             }
         );
 
-        // shouldn't happen, but better safe than sorry
         if (items.length === 0) {
             return;
         }
@@ -115,28 +114,30 @@ class CommandHandler {
      */
     formatRanges(editor, selectedRanges) {
 
-        this.config.eol = editor.document.eol;
-        this.config.WrapGuideColumn = 80; // any way to read this from nova prefs?
+        const WrapGuideColumn = 80; // any way to read this from nova prefs?
 
         const parser = new LanguageParser({
             language: editor.document.syntax
         });
 
         // do everything in one edit so we can undo in one step
-        editor.edit((textEditorEdit) => {
+        editor.edit((edit) => {
             const ranges = selectedRanges.reverse(); // backwards
             ranges.forEach(range => {
                 let docBlock = editor.getTextInRange(range);
                 let indent = /^[\t ]*/.exec(docBlock)[0];
 
                 docBlock = parser.parseDocBlock(docBlock);
-                if (docBlock) {
+                if (docBlock.length > 0) {
                     let snippet = parser.formatDocBlock(docBlock, this.config);
-                    if (snippet) {
-                        snippet = parser.wrapDocBlock(snippet, indent, this.config);
-                        textEditorEdit.replace(range, ""); // ged rid of selection
-                        textEditorEdit.insert(range.start, snippet); // plain text is default
-                    }
+                    let wrapWidth = WrapGuideColumn-indent.length;                    
+
+                    snippet = indent + parser
+                        .wrapLines(snippet, wrapWidth)
+                        .join(editor.document.eol + indent);
+
+                    edit.replace(range, ""); // ged rid of selection
+                    edit.insert(range.start, snippet); // plain text is default
                 }
             });
         });
