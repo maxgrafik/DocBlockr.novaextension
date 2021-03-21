@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.3",
+    "version": "0.4",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -21,7 +21,7 @@
         "editor": [
             {
                 "title": "Insert DocBlock",
-                "command": "insertDocBlock",
+                "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
                     "syntaxes": ["javascript", "typescript", "php"]
@@ -29,7 +29,7 @@
             },
             {
                 "title": "Format DocBlock",
-                "command": "formatDocBlock",
+                "command": "maxgrafik.DocBlockr.cmd.formatDocBlock",
                 "when": "editorHasFocus",
                 "filters": {
                     "syntaxes": ["javascript", "typescript", "php"]
@@ -102,6 +102,21 @@
                     "default": 0
                 }
             ]
+        },
+        {
+            "key": "maxgrafik.DocBlockr.config.sectionCustomTags",
+            "title": "Custom Tags",
+            "description": "Specify which tags should be added to header blocks",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.config.customTags",
+                    "title": "Tags",
+                    "description": "You may add tags including values (e.g. @author your_name <your_email>) or just enter plain tags, in which case placeholders are automatically added depending on the specification.",
+                    "type": "stringArray",
+                    "default": ["@author ${AUTHOR_NAME}"]
+                }
+            ]
         }
     ],
     
@@ -109,7 +124,6 @@
         {
             "key": "maxgrafik.DocBlockr.workspace.sectionMain",
             "title": "Workspace Settings",
-            "description": "Enable DocBlockr for the following languages:",
             "type": "section",
             "children": [
                 {
@@ -174,6 +188,25 @@
                     "values": [[null, "Use global settings"], [0, "Don’t align tags"], [1, "Shallow"], [3, "Deep"]],
                     "radio": false,
                     "default": null
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.DocBlockr.workspace.sectionCustomTags",
+            "title": "Custom Tags",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.useWorkspaceTags",
+                    "title": "Workspace",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [true, "Use tags specified below"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.customTags",
+                    "title": "Tags",
+                    "type": "stringArray"
                 }
             ]
         }
