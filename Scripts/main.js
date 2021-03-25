@@ -1,4 +1,7 @@
+"use strict";
+
 const CompletionProvider = require("completionProvider.js");
+const CommentExtender = require("commentExtender.js");
 const CommandHandler = require("commandHandler.js");
 
 const config = {
@@ -8,7 +11,8 @@ const config = {
     addEmptyLineJS  : 0,
     addEmptyLineTS  : 0,
     addEmptyLinePHP : 2,
-    alignTags : 0
+    alignTags : 0,
+    extendComments : false
 };
 
 exports.activate = function() {
@@ -64,16 +68,92 @@ exports.activate = function() {
         const commandHandler = new CommandHandler(config);
         commandHandler.formatDocBlock(editor);
     });
+
+    /**
+     * Register Comment Extender
+     */
+    if (config.extendComments) {
+        registerCommentExtender();
+    }
 }
 
 exports.deactivate = function() {
-    // Clean up state before the extension is deactivated
+    unregisterCommentExtender();
 }
 
 
 /**
  * Helper functions
  */
+
+let events = new CompositeDisposable();
+let extenders = new Map();
+
+function registerCommentExtender() {
+
+    events.add(
+        nova.commands.register("maxgrafik.DocBlockr.cmd.insertLinebreak", editor => {
+            const commentExtender = extenders.get(editor.document.uri);
+            if (commentExtender) {
+                commentExtender.handleKeydown(editor, "return");
+            }
+        })
+    );
+    
+    events.add(
+        nova.commands.register("maxgrafik.DocBlockr.cmd.insertTab", editor => {
+            const commentExtender = extenders.get(editor.document.uri);
+            if (commentExtender) {
+                commentExtender.handleKeydown(editor, "tab");
+            }
+        })
+    );
+
+    events.add(
+        nova.workspace.onDidAddTextEditor(editor => {
+            
+            const syntax = editor.document.syntax;
+
+            // skip if not enabled for language
+            if (!["javascript", "typescript", "php"].includes(syntax)) {
+                return;
+            }
+            if (syntax === "javascript" && !config.enableJS) {
+                return;
+            }
+            if (syntax === "typescript" && !config.enableTS) {
+                return;
+            }
+            if (syntax === "php" && !config.enablePHP) {
+                return;
+            }
+
+            const commentExtender = new CommentExtender(editor);
+            extenders.set(editor.document.uri, commentExtender);
+
+            events.add(
+                editor.onDidDestroy(() => {
+                    const extender = extenders.get(editor.document.uri);
+                    if (extender) {
+                        extender.dispose();
+                        extenders.delete(editor.document.uri);
+                    }
+                })
+            );
+        })
+    );
+}
+
+function unregisterCommentExtender() {
+    // dispose registered comment extenders
+    extenders.forEach(extender => {
+        extender.dispose();
+    });
+    extenders.clear();
+
+    // dispose event listeners
+    events.dispose();
+}
 
 function updateConfigFromWorkspace(newVal) {
     const key = this;
@@ -89,6 +169,14 @@ function updateConfigFromGlobal(newVal) {
     const workspaceConfig = nova.workspace.config.get("maxgrafik.DocBlockr.workspace."+key);
     if (workspaceConfig === null) {
         config[key] = newVal;
+    }
+
+    if (key === "extendComments") {
+        if (newVal) {
+            registerCommentExtender();
+        } else {
+            unregisterCommentExtender();
+        }
     }
 }
 

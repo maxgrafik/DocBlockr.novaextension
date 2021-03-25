@@ -107,6 +107,10 @@ class LanguageParser {
             let lastIdx = lines.length-1;
             if (lastIdx < 0 || lines[lastIdx] === "") {
                 lines.push(text || tag || "");
+            } else if (lastIdx === 0 && lines[lastIdx].endsWith(".")) {
+                lines.push(text || tag || ""); // period ends summary (see specs)
+            } else if (!tag && !text) {
+                lines.push(""); // keep empty lines
             } else if (tag) {
                 lines.push(tag);
             } else if (text) {
