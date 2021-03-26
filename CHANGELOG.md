@@ -1,7 +1,7 @@
 ## Version 0.5
 
 * Comment extension _(experimental feature)_  
-  Pressing return inside a docblock will try to insert a leading asterisk and maintain indentation. This is very hacky code, which constantly tracks cursor position and docblock contents. This **may** slow down your editor, which is why this is an experimental feature and disabled by default.
+  Pressing return inside a docblock will try to insert a leading asterisk and maintain indentation. This is very hacky code, which constantly tracks cursor position and docblock contents. This **may** slow down your editor, which is why this is an experimental feature and disabled by default. Can be enabled in global settings.
 * minor fixes
 
 

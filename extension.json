@@ -41,7 +41,7 @@
                 "title": "Insert Linebreak",
                 "command": "maxgrafik.DocBlockr.cmd.insertLinebreak",
                 "shortcut": "return",
-                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyDown",
+                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
                     "syntaxes": ["javascript", "typescript", "php"]
                 }
@@ -50,7 +50,7 @@
                 "title": "Insert Tab",
                 "command": "maxgrafik.DocBlockr.cmd.insertTab",
                 "shortcut": "tab",
-                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyDown",
+                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyTab",
                 "filters": {
                     "syntaxes": ["javascript", "typescript", "php"]
                 }

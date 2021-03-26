@@ -30,7 +30,7 @@ class CommentExtender {
     dispose() {
         this.events.dispose();
         this.docBlocks = null;
-        this.setContext(false);
+        this.setContext({"return": false, "tab": false});
     }
 
     /**
@@ -38,16 +38,6 @@ class CommentExtender {
      */
     trackPosition(editor) {
         
-        // commands are disabled in extension.json when there is
-        // a selection, so there should be no need to track this
-
-        // skip if selection
-        // let selectedRange = editor.selectedRange;
-        // if (selectedRange.start !== selectedRange.end) {
-        //     this.setContext(false);
-        //     return;
-        // }
-
         let cursorPosition = editor.selectedRange.start;
 
         let docBlock = this.docBlocks.find(range => {
@@ -55,7 +45,7 @@ class CommentExtender {
         });
 
         if (!docBlock) {
-            this.setContext(false);
+            this.setContext({"return": false, "tab": false});
             return;
 
         } else {
@@ -69,15 +59,22 @@ class CommentExtender {
             // set state to false if text before cursor is @...
             // otherwise committing completion items won't work
             if (/@[a-zA-Z]*$/.test(line)) {
-                this.setContext(false);
+                this.setContext({"return": false, "tab": true});
                 return;
             }
             
-            let text = editor.getTextInRange(docBlock);
+            // we may have an invalid range here
+            // so wrap in try ... catch block
+            let text = "";
+            try {
+                text = editor.getTextInRange(docBlock);
+            } catch(e) {
+                this.setContext({"return": true, "tab": true});
+            }
 
             // Nova uses \uFFFC (Object Replacement Character) for
-            // snippet placeholders, if so set state to false
-            this.setContext(/[\uFFFC]+/.test(text) ? false : true);
+            // snippet placeholders, if so set tab event to false
+            this.setContext({"return": true, "tab": (/[\uFFFC]+/.test(text) ? false : true)});
         }
     }
 
@@ -102,7 +99,7 @@ class CommentExtender {
             }
         }
 
-        if (event === "tab") {
+        else if (event === "tab") {
 
             const regex = [
                 new RegExp(/^\s*\*(\s*@(?:param|property)\s+\S+\s+\S+\s+)\S/),
@@ -135,13 +132,16 @@ class CommentExtender {
     /**
      * Sets Nova context
      * Commands for insertLinebreak and insertTab are conditionally enabled
-     * based on 'maxgrafik.DocBlockr.evt.keyDown' custom context variable
+     * based on 'maxgrafik.DocBlockr.evt.keyXXX' custom context variables
      */
-    setContext(state) {
-        let currentState = nova.workspace.context.get("maxgrafik.DocBlockr.evt.keyDown");
-        if (state !== currentState) {
-            nova.workspace.context.set("maxgrafik.DocBlockr.evt.keyDown", state);
-        }
+    setContext(events) {
+        Object.keys(events).forEach(key => {
+            let eventName = "maxgrafik.DocBlockr.evt.key" + key.charAt(0).toUpperCase() + key.slice(1);
+            let current = nova.workspace.context.get(eventName);
+            if (current !== events[key]) {
+                nova.workspace.context.set(eventName, events[key]);
+            }
+        });
     }
 
     /**
