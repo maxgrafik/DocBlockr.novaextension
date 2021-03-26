@@ -226,7 +226,7 @@ class TypeScriptParser extends LanguageParser {
         let typed = match.groups.tag;
         
         tags.forEach(tag => {
-            if (tag[0].substr(0, typed.length) === typed) {
+            if (tag[0].includes(typed)) {
                 matches.push(tag);
             }
         });

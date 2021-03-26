@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.4",
+    "version": "0.5",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -31,6 +31,26 @@
                 "title": "Format DocBlock",
                 "command": "maxgrafik.DocBlockr.cmd.formatDocBlock",
                 "when": "editorHasFocus",
+                "filters": {
+                    "syntaxes": ["javascript", "typescript", "php"]
+                }
+            }
+        ],
+        "text": [
+            {
+                "title": "Insert Linebreak",
+                "command": "maxgrafik.DocBlockr.cmd.insertLinebreak",
+                "shortcut": "return",
+                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
+                "filters": {
+                    "syntaxes": ["javascript", "typescript", "php"]
+                }
+            },
+            {
+                "title": "Insert Tab",
+                "command": "maxgrafik.DocBlockr.cmd.insertTab",
+                "shortcut": "tab",
+                "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyTab",
                 "filters": {
                     "syntaxes": ["javascript", "typescript", "php"]
                 }
@@ -115,6 +135,20 @@
                     "description": "You may add tags including values (e.g. @author your_name <your_email>) or just enter plain tags, in which case placeholders are automatically added depending on the specification.",
                     "type": "stringArray",
                     "default": ["@author ${AUTHOR_NAME}"]
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.DocBlockr.config.sectionExperimental",
+            "title": "Experimental Features",
+            "type": "section",
+            "children": [
+                {
+                    "key": "maxgrafik.DocBlockr.config.extendComments",
+                    "title": "Extend Comments",
+                    "description": "Pressing enter inside a docblock will automatically insert a leading asterisk",
+                    "type": "boolean",
+                    "default": false
                 }
             ]
         }

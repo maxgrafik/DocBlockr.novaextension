@@ -86,7 +86,9 @@ class CommandHandler {
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            "^[\\t ]*\\/\\*\\*.+?\\*\\/[\\t ]*$"
+            // added negative lookahead (?!/**)
+            // to not match unfinished docblocks
+            "^[\\t ]*\\/\\*\\*(?:(?!\\/\\*\\*).)+?\\*\\/[\\t ]*$"
         , "gms");
 
         const range = new Range(0, editor.document.length);

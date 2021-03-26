@@ -107,6 +107,10 @@ class LanguageParser {
             let lastIdx = lines.length-1;
             if (lastIdx < 0 || lines[lastIdx] === "") {
                 lines.push(text || tag || "");
+            } else if (lastIdx === 0 && lines[lastIdx].endsWith(".")) {
+                lines.push(text || tag || ""); // period ends summary (see specs)
+            } else if (!tag && !text) {
+                lines.push(""); // keep empty lines
             } else if (tag) {
                 lines.push(tag);
             } else if (text) {
@@ -123,7 +127,7 @@ class LanguageParser {
             let matches = regex.exec(line);
             if (line && matches) {
                 let tag = matches.groups.tag;
-                let remainder = matches.groups.remainder
+                let remainder = (matches.groups.remainder || "")
                     .replace(/\t/g, " ")
                     .replace(/\s{2,}/g, " ");
 
@@ -280,12 +284,6 @@ class LanguageParser {
         }
 
         out.push(["${0:summary}"]);
-
-        // disabled for now - haven't really seen this in the wild
-        // if (type === "member" || type === "getter") {
-        //     tabOffset++;
-        //     out.push(["@memberof ${" + tabOffset + ":parent}"]);
-        // }
 
         // if there are arguments, add a @param for each
         if (args) {
