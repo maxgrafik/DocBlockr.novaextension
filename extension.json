@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.5",
+    "version": "0.6",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -14,7 +14,9 @@
     "activationEvents": [
         "onLanguage:javascript",
         "onLanguage:typescript",
-        "onLanguage:php"
+        "onLanguage:php",
+        "onLanguage:jsx",
+        "onLanguage:tsx"
     ],
 
     "commands": {
@@ -24,7 +26,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
                 }
             },
             {
@@ -32,7 +34,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.formatDocBlock",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
                 }
             }
         ],
@@ -43,7 +45,7 @@
                 "shortcut": "return",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
                 }
             },
             {
@@ -52,7 +54,7 @@
                 "shortcut": "tab",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyTab",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
                 }
             }
         ]

@@ -1,3 +1,9 @@
+## Version 0.6
+
+* Added basic support for JSX/TSX files.
+  Enabling JavaScript also enables it for JSX. Same for TypeScript/TSX.
+
+
 ## Version 0.5
 
 * Comment extension _(experimental feature)_  
