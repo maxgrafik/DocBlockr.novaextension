@@ -24,10 +24,10 @@ class CompletionProvider {
         const syntax = editor.document.syntax;
         
         // skip if not enabled for language
-        if (syntax === "javascript" && !this.config.enableJS) {
+        if ((syntax === "javascript" || syntax === "jsx") && !this.config.enableJS) {
             return [];
         }
-        if (syntax === "typescript" && !this.config.enableTS) {
+        if ((syntax === "typescript" || syntax === "tsx") && !this.config.enableTS) {
             return [];
         }
         if (syntax === "php" && !this.config.enablePHP) {
@@ -53,9 +53,11 @@ class CompletionProvider {
         
         switch (syntax) {
         case "javascript":
+        case "jsx":
             parser = new JavaScriptParser();
             break;
         case "typescript":
+        case "tsx":
             parser = new TypeScriptParser();
             break;
         case "php":

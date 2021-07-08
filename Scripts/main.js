@@ -50,7 +50,7 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["javascript", "typescript", "php"],
+        ["javascript", "typescript", "php", "jsx", "tsx"],
         new CompletionProvider(config),
         {
             triggerChars: new Charset("*@")
@@ -115,13 +115,13 @@ function registerCommentExtender() {
             const syntax = editor.document.syntax;
 
             // skip if not enabled for language
-            if (!["javascript", "typescript", "php"].includes(syntax)) {
+            if (!["javascript", "typescript", "php", "jsx", "tsx"].includes(syntax)) {
                 return;
             }
-            if (syntax === "javascript" && !config.enableJS) {
+            if ((syntax === "javascript" || syntax === "jsx") && !config.enableJS) {
                 return;
             }
-            if (syntax === "typescript" && !config.enableTS) {
+            if ((syntax === "typescript" || syntax === "tsx") && !config.enableTS) {
                 return;
             }
             if (syntax === "php" && !config.enablePHP) {
