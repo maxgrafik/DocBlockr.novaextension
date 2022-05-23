@@ -22,7 +22,7 @@ class CompletionProvider {
         }
 
         const syntax = editor.document.syntax;
-        
+
         // skip if not enabled for language
         if ((syntax === "javascript" || syntax === "jsx") && !this.config.enableJS) {
             return [];
@@ -50,7 +50,7 @@ class CompletionProvider {
         }
 
         let parser;
-        
+
         switch (syntax) {
         case "javascript":
         case "jsx":
@@ -81,6 +81,11 @@ class CompletionProvider {
 
         // provide block comment if EOF
         if (!text.match(/^[\t ]*(.+)$/m)) {
+            return [this.provideBlockComment()];
+        }
+
+        // provide block comment if next is another comment
+        if (text.trim().match(/^\/(\*|\/)/)) {
             return [this.provideBlockComment()];
         }
 
@@ -149,7 +154,7 @@ class CompletionProvider {
     }
 
     /**
-     * Provide inline comment  
+     * Provide inline comment
      * @returns {CompletionItem}
      */
     provideInlineComment() {
@@ -161,7 +166,7 @@ class CompletionProvider {
     }
 
     /**
-     * Provide block comment  
+     * Provide block comment
      * @returns {CompletionItem}
      */
     provideBlockComment() {
@@ -201,7 +206,7 @@ class CompletionProvider {
             "^(?<tag>@[^\\s]+)?" +
             "(?:\\s*(?<remainder>.+))?$"
         );
-        
+
         docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
 
         if (this.config.customTags && this.config.customTags.length) {
@@ -233,7 +238,7 @@ class CompletionProvider {
                     .replaceAll(/\$\{\d+:/g, () => "${"+(tabStop++)+":");
             });
         });
-        
+
         const snippet = parser.formatDocBlock(docBlock, this.config);
 
         return this.createCompletionItem(

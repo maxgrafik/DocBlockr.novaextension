@@ -1,22 +1,22 @@
 /**
  * Comment Extender
- * 
+ *
  * Will try to insert a leading asterisk and maintain indentation
  * when pressing return inside a docBlock. When writing multiline
  * descriptions, pressing tab will try to move the indentation to
  * the correct position.
- * 
+ *
  * This is an awful piece of code, which constantly tracks cursor
  * position and contents of the docBlock currently in. But I have
  * no better idea how to solve this with the API provided by Nova.
  * Any suggestions are welcome!
  */
 class CommentExtender {
-    
+
     constructor(editor) {
         this.events = new CompositeDisposable();
         this.docBlocks = this.getDocBlockRanges(editor);
-        
+
         this.events.add(editor.onDidChangeSelection(() => {
             this.trackPosition(editor);
         }));
@@ -37,7 +37,7 @@ class CommentExtender {
      * Checks if cursor is inside a docBlock
      */
     trackPosition(editor) {
-        
+
         let cursorPosition = editor.selectedRange.start;
 
         let docBlock = this.docBlocks.find(range => {
@@ -55,14 +55,14 @@ class CommentExtender {
             let line = editor.getTextInRange(
                 new Range(lineRange.start, cursorPosition)
             );
-            
+
             // set state to false if text before cursor is @...
             // otherwise committing completion items won't work
             if (/@[a-zA-Z]*$/.test(line)) {
                 this.setContext({"return": false, "tab": true});
                 return;
             }
-            
+
             // we may have an invalid range here
             // so wrap in try ... catch block
             let text = "";
@@ -84,7 +84,7 @@ class CommentExtender {
 
             let lineRange = editor.getLineRangeForRange(editor.selectedRange);
             let lineText = editor.getTextInRange(lineRange).replace(/[\n\r]+$/, "");
-            
+
             let prevRange = new Range(lineRange.start, editor.selectedRange.start);
             let prevText = editor.getTextInRange(prevRange);
 
@@ -149,7 +149,7 @@ class CommentExtender {
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            "^[\\t ]*\\/\\*\\*(?:(?!\\/\\*\\*).)+?\\*\\/[\\t ]*$"
+            "^[\\t ]*\\/\\*\\*(?:(?!\\/(?:\\/|\\*|\\*\\*)).)+?\\*\\/[\\t ]*$"
         , "gms");
 
         let range = new Range(0, editor.document.length);

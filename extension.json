@@ -3,14 +3,14 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.6",
+    "version": "0.6.1",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
     "license": "MIT",
-    
+
     "main": "main.js",
-    
+
     "activationEvents": [
         "onLanguage:javascript",
         "onLanguage:typescript",
@@ -59,7 +59,7 @@
             }
         ]
     },
-    
+
     "config": [
         {
             "key": "maxgrafik.DocBlockr.config.sectionMain",
@@ -155,7 +155,7 @@
             ]
         }
     ],
-    
+
     "configWorkspace": [
         {
             "key": "maxgrafik.DocBlockr.workspace.sectionMain",
