@@ -1,6 +1,7 @@
 const JavaScriptParser = require("languages/javascript.js");
 const TypeScriptParser = require("languages/typescript.js");
 const PHPParser = require("languages/php.js");
+const CParser = require("languages/c.js");
 
 /**
  * Completion Provider
@@ -63,6 +64,11 @@ class CompletionProvider {
         case "php":
             parser = new PHPParser();
             break;
+		case "c":
+		case "cpp":
+		case "lsl":
+			parser = new CParser();
+			break;
         default:
             return [];
         }
@@ -232,6 +238,7 @@ class CompletionProvider {
         let tabStop = 0;
         docBlock.forEach((row, rowIdx) => {
             row.forEach((col, colIdx) => {
+				// note: col unused.
                 docBlock[rowIdx][colIdx] = docBlock[rowIdx][colIdx]
                     // why oh why no lookbehinds Apple?!
                     //.replaceAll(/(?<=\$\{)\d+(?=:)/g, () => tabStop++);
