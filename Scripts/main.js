@@ -8,9 +8,11 @@ const config = {
     enableJS  : true,
     enableTS  : false,
     enablePHP : true,
+	enableC	  : false,
     addEmptyLineJS  : 0,
     addEmptyLineTS  : 0,
     addEmptyLinePHP : 2,
+	addEmptyLineC   : 1,
     alignTags : 0,
     extendComments : false
 };
@@ -50,13 +52,13 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["javascript", "typescript", "php", "jsx", "tsx"],
+        ["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"],
         new CompletionProvider(config),
         {
             triggerChars: new Charset("*@")
         }
     );
-    
+
     /**
      * Register Command Handlers
      */
@@ -99,7 +101,7 @@ function registerCommentExtender() {
             }
         })
     );
-    
+
     events.add(
         nova.commands.register("maxgrafik.DocBlockr.cmd.insertTab", editor => {
             const commentExtender = extenders.get(editor.document.uri);
@@ -111,11 +113,12 @@ function registerCommentExtender() {
 
     events.add(
         nova.workspace.onDidAddTextEditor(editor => {
-            
+
             const syntax = editor.document.syntax;
 
             // skip if not enabled for language
-            if (!["javascript", "typescript", "php", "jsx", "tsx"].includes(syntax)) {
+			// I wonder if a switch() statement wouldn't make this clearer. (gwyneth 20220817)
+            if (!["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"].includes(syntax)) {
                 return;
             }
             if ((syntax === "javascript" || syntax === "jsx") && !config.enableJS) {
@@ -127,6 +130,11 @@ function registerCommentExtender() {
             if (syntax === "php" && !config.enablePHP) {
                 return;
             }
+			// All C-style languages (except, of course, C# and Objective-C!) can be
+			// simultaneously selected, no need to define a specific one.
+			if (["c", "cpp", "lsl"].includes(syntax) && !config.enableC) {
+				return;
+			}
 
             const commentExtender = new CommentExtender(editor);
             extenders.set(editor.document.uri, commentExtender);
