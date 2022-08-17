@@ -1,5 +1,6 @@
 .DS_Store
 .eslintrc.json
 .nova
+.editorconfig
 package.json
 Test
