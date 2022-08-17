@@ -9,7 +9,7 @@ const LanguageParser = require("parser.js");
  * @todo    At the very least, extract a _real_ list of keywords etc. from the
  * 		    appropriate syntax for C, C++, LSL.
  * @author  Gwyneth Llewelyn <gwyneth.llewelyn@gwynethllewelyn.net>
- * @since   v0.6.2
+ * @since   v0.6.3
  */
 
 class CParser extends LanguageParser {
