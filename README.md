@@ -14,6 +14,7 @@ To (re-)format a comment block select it (or just place the cursor inside) and s
 
 DocBlockr currently supports JavaScript, TypeScript and PHP. You can read more about documentation comments here: [JSDoc](https://jsdoc.app/) and [phpDocumentor](https://phpdoc.org).
 
+Experimentally, C/C++ and other C-inspired languages are also supported, but inactive by default.
 
 ### Note
 
