@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -26,7 +26,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"]
                 }
             },
             {
@@ -34,7 +34,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.formatDocBlock",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"]
                 }
             }
         ],
@@ -45,7 +45,7 @@
                 "shortcut": "return",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"]
                 }
             },
             {
@@ -54,7 +54,7 @@
                 "shortcut": "tab",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyTab",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "c", "cpp", "lsl"]
                 }
             }
         ]
@@ -84,7 +84,13 @@
                     "title": "PHP",
                     "type": "boolean",
                     "default": true
-                }
+                },
+				{
+					"key": "maxgrafik.DocBlockr.config.enableC",
+					"title": "C, C++, LSL",
+					"type": "boolean",
+					"default": true
+				}
             ]
         },
         {
@@ -96,7 +102,7 @@
                     "key": "maxgrafik.DocBlockr.config.addEmptyLineJS",
                     "title": "JavaScript",
                     "type": "enum",
-                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
                     "default": 0,
                     "radio": false
                 },
@@ -104,7 +110,7 @@
                     "key": "maxgrafik.DocBlockr.config.addEmptyLineTS",
                     "title": "TypeScript",
                     "type": "enum",
-                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
                     "default": 0,
                     "radio": false
                 },
@@ -112,15 +118,23 @@
                     "key": "maxgrafik.DocBlockr.config.addEmptyLinePHP",
                     "title": "PHP",
                     "type": "enum",
-                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
                     "default": 2,
                     "radio": false
                 },
-                {
+				{
+					"key": "maxgrafik.DocBlockr.config.addEmptyLineC",
+					"title": "C, C++, LSL",
+					"type": "enum",
+					"values": [["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
+					"default": 2,
+					"radio": false
+				},
+				{
                     "key": "maxgrafik.DocBlockr.config.alignTags",
                     "title": "Align Tags",
                     "type": "enum",
-                    "values": [[0, "Don’t align tags"], [1, "Shallow"], [3, "Deep"]],
+                    "values": [["0", "Don’t align tags"], ["1", "Shallow"], ["3", "Deep"]],
                     "default": 0
                 }
             ]
@@ -166,7 +180,7 @@
                     "key": "maxgrafik.DocBlockr.workspace.enableJS",
                     "title": "JavaScript",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "values": [[null, "Use global settings"], ["true", "Enabled"], ["false", "Disabled"]],
                     "radio": false,
                     "default": null
                 },
@@ -174,7 +188,7 @@
                     "key": "maxgrafik.DocBlockr.workspace.enableTS",
                     "title": "TypeScript",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "values": [[null, "Use global settings"], ["true", "Enabled"], ["false", "Disabled"]],
                     "radio": false,
                     "default": null
                 },
@@ -182,10 +196,18 @@
                     "key": "maxgrafik.DocBlockr.workspace.enablePHP",
                     "title": "PHP",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "values": [[null, "Use global settings"], ["true", "Enabled"], ["false", "Disabled"]],
                     "radio": false,
                     "default": null
-                }
+                },
+				{
+					"key": "maxgrafik.DocBlockr.workspace.enableC",
+					"title": "C, C++, LSL",
+					"type": "enum",
+					"values": [[null, "Use global settings"], ["true", "Enabled"], ["false", "Disabled"]],
+					"radio": false,
+					"default": null
+				}
             ]
         },
         {
@@ -197,7 +219,7 @@
                     "key": "maxgrafik.DocBlockr.workspace.addEmptyLineJS",
                     "title": "JavaScript",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [[null, "Use global settings"], ["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
                     "radio": false,
                     "default": null
                 },
@@ -205,7 +227,7 @@
                     "key": "maxgrafik.DocBlockr.workspace.addEmptyLineTS",
                     "title": "TypeScript",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [[null, "Use global settings"], ["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["2", "Don’t add empty lines"]],
                     "radio": false,
                     "default": null
                 },
@@ -213,15 +235,23 @@
                     "key": "maxgrafik.DocBlockr.workspace.addEmptyLinePHP",
                     "title": "PHP",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "values": [[null, "Use global settings"], ["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
                     "radio": false,
                     "default": null
                 },
+				{
+					"key": "maxgrafik.DocBlockr.workspace.addEmptyLineC",
+					"title": "C, C++, LSL",
+					"type": "enum",
+					"values": [[null, "Use global settings"], ["1", "Add empty line after summary"], ["2", "Add empty line between sections"], ["0", "Don’t add empty lines"]],
+					"radio": false,
+					"default": null
+				},
                 {
                     "key": "maxgrafik.DocBlockr.workspace.alignTags",
                     "title": "Align Tags",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [0, "Don’t align tags"], [1, "Shallow"], [3, "Deep"]],
+                    "values": [[null, "Use global settings"], ["0", "Don’t align tags"], ["1", "Shallow"], ["3", "Deep"]],
                     "radio": false,
                     "default": null
                 }
@@ -236,7 +266,7 @@
                     "key": "maxgrafik.DocBlockr.workspace.useWorkspaceTags",
                     "title": "Workspace",
                     "type": "enum",
-                    "values": [[null, "Use global settings"], [true, "Use tags specified below"]],
+                    "values": [[null, "Use global settings"], ["true", "Use tags specified below"]],
                     "default": null
                 },
                 {
