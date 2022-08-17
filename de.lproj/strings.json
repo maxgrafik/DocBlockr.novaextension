@@ -14,6 +14,7 @@
     "Shallow": "Nur Schlüsselwörter",
     "Deep": "Alles",
     "Custom Tags": "Benutzerdefinierte Tags",
+	"Tags": "Tags",
     "Specify which tags should be added to header blocks": "Diese Tags werden zu Kommentarblöcken im Kopfbereich hinzugefügt",
     "Workspace": "Projekt",
     "Use tags specified below": "Unten angegebene Tags verwenden",
@@ -21,6 +22,11 @@
     "Insert DocBlock": "Kommentar einfügen",
     "Format DocBlock": "Kommentare formatieren",
     "Do you want to format all DocBlocks in this document?": "Sollen alle Kommentare im Dokument formatiert werden?",
-    "Format All": "Alle formatieren",
-    "Cancel": "Abbrechen"
+	"Insert Linebreak": "Leerzeile einfügen",
+	"Insert Tab": "Tabulation einfügen",
+	"Format All": "Alle formatieren",
+	"Cancel": "Abbrechen",
+	"Experimental Features": "Experimentelle Funktionen",
+	"Extend Comments": "Kommentare erweitern",
+	"Pressing enter inside a docblock will automatically insert a leading asterisk": "Durch Drücken der Eingabetaste innerhalb eines Kommentars wird automatisch ein führendes Sternchen eingefügt"
 }
