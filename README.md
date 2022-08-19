@@ -12,9 +12,14 @@ If the line directly afterwards contains a function definition or variable decla
 
 To (re-)format a comment block select it (or just place the cursor inside) and select **Editor > DocBlockr > Format DocBlock**.
 
-DocBlockr currently supports JavaScript, TypeScript and PHP. You can read more about documentation comments here: [JSDoc](https://jsdoc.app/) and [phpDocumentor](https://phpdoc.org).
+DocBlockr currently supports JavaScript, TypeScript, PHP and C/C++. You can read more about documentation comments here: [JSDoc](https://jsdoc.app/) and [phpDocumentor](https://phpdoc.org).
 
 
 ### Note
 
 This started as a port of [DocBlockr for Atom](https://github.com/nikhilkalige/docblockr) by Nikhil Kalige, which is a port of [DocBlockr for Sublime Text](https://github.com/spadgos/sublime-jsdocs) by Nick Fisher. By now large parts of the original code were refactored and I basically kept the RegExp only. More or less.
+
+
+### Special Thanks
+
+Portuguese translation by [Gwyneth Llewelyn](https://github.com/GwynethLlewelyn)

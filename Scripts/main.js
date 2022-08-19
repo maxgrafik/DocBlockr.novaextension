@@ -8,11 +8,14 @@ const config = {
     enableJS  : true,
     enableTS  : false,
     enablePHP : true,
+    enableCPP : true,
     addEmptyLineJS  : 0,
     addEmptyLineTS  : 0,
     addEmptyLinePHP : 2,
+    addEmptyLineCPP : 1,
     alignTags : 0,
-    extendComments : false
+    extendComments : false,
+    ESLintComments : false
 };
 
 exports.activate = function() {
@@ -50,13 +53,13 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["javascript", "typescript", "php", "jsx", "tsx"],
+        ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"],
         new CompletionProvider(config),
         {
             triggerChars: new Charset("*@")
         }
     );
-    
+
     /**
      * Register Command Handlers
      */
@@ -75,19 +78,19 @@ exports.activate = function() {
     if (config.extendComments) {
         registerCommentExtender();
     }
-}
+};
 
 exports.deactivate = function() {
     unregisterCommentExtender();
-}
+};
 
 
 /**
  * Helper functions
  */
 
-let events = new CompositeDisposable();
-let extenders = new Map();
+const events = new CompositeDisposable();
+const extenders = new Map();
 
 function registerCommentExtender() {
 
@@ -99,7 +102,7 @@ function registerCommentExtender() {
             }
         })
     );
-    
+
     events.add(
         nova.commands.register("maxgrafik.DocBlockr.cmd.insertTab", editor => {
             const commentExtender = extenders.get(editor.document.uri);
@@ -111,11 +114,11 @@ function registerCommentExtender() {
 
     events.add(
         nova.workspace.onDidAddTextEditor(editor => {
-            
+
             const syntax = editor.document.syntax;
 
             // skip if not enabled for language
-            if (!["javascript", "typescript", "php", "jsx", "tsx"].includes(syntax)) {
+            if (!["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"].includes(syntax)) {
                 return;
             }
             if ((syntax === "javascript" || syntax === "jsx") && !config.enableJS) {
@@ -125,6 +128,9 @@ function registerCommentExtender() {
                 return;
             }
             if (syntax === "php" && !config.enablePHP) {
+                return;
+            }
+            if (["cpp", "c", "lsl"].includes(syntax) && !config.enableCPP) {
                 return;
             }
 

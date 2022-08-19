@@ -8,7 +8,7 @@
 class LanguageParser {
 
     constructor(settings) {
-        this.settings = settings
+        this.settings = settings;
     }
 
     getDefinition(lines) {
@@ -28,11 +28,11 @@ class LanguageParser {
 
             for (const char of line) {
                 switch(char) {
-                    case "(": bracketCounter++; break;
-                    case ")": bracketCounter--; break;
+                case "(": bracketCounter++; break;
+                case ")": bracketCounter--; break;
                 }
             }
-    
+
             if (line !== "") {
                 definition += line;
                 if (line.endsWith(";")) {
@@ -74,9 +74,24 @@ class LanguageParser {
     }
 
     parseDocBlock(docBlock) {
-        let out = [];
-        let keywords = ["@param", "@property", "@return", "@returns", "@throws", "@yields"];
-    
+        const out = [];
+
+        // The fields which we format/align
+        // The boolean indicates whether to skip the arg column
+        const keywords = {
+            "param": false,
+            "property": false,
+            "returns": true,
+            "return": true,
+            "retval": true,
+            "result": true,
+            "throws": true,
+            "throw": true,
+            "exception": true,
+            "yields": true,
+            "yield": true
+        };
+
         // de-indent and strip all comment markers
         docBlock = docBlock
             .replace(/^[\t ]*\/\*\*[\t ]*$/m, "")
@@ -90,8 +105,9 @@ class LanguageParser {
 
         let regex = new RegExp(
             // find either a text line, a tag line or an empty line
-            "(?<text>^[^@\\n\\r].+?$)|(?<tag>^@.+?$)|(?<empty>^$)"
-        , "gm");
+            "(?<text>^[^@\\n\\r].+?$)|(?<tag>^@.+?$)|(?<empty>^$)",
+            "gm"
+        );
 
         const matches = docBlock.matchAll(regex);
         if (!matches) {
@@ -99,12 +115,12 @@ class LanguageParser {
         }
 
         // add continuations to preceding line
-        let lines = [];
+        const lines = [];
         for (const match of matches) {
-            let text = match.groups.text || false;
-            let tag  = match.groups.tag  || false;
+            const text = match.groups.text || false;
+            const tag  = match.groups.tag  || false;
 
-            let lastIdx = lines.length-1;
+            const lastIdx = lines.length-1;
             if (lastIdx < 0 || lines[lastIdx] === "") {
                 lines.push(text || tag || "");
             } else if (lastIdx === 0 && lines[lastIdx].endsWith(".")) {
@@ -122,36 +138,47 @@ class LanguageParser {
             "^(?<tag>@[^\\s]+)?" +
             "(?:\\s*(?<remainder>.+))?$"
         );
-    
+
         lines.forEach(line => {
-            let matches = regex.exec(line);
+            const matches = regex.exec(line);
             if (line && matches) {
-                let tag = matches.groups.tag;
-                let remainder = (matches.groups.remainder || "")
+                const tag = matches.groups.tag;
+                const remainder = (matches.groups.remainder || "")
                     .replace(/\t/g, " ")
                     .replace(/\s{2,}/g, " ");
 
                 if (!tag) {
                     out.push([remainder]);
 
-                } else if (keywords.indexOf(tag) < 0) {
+                } else if (!Object.keys(keywords).includes(tag.slice(1))) {
                     out.push([tag, remainder]);
 
-                } else if (keywords.indexOf(tag) > -1) {
-                    let splits = remainder.split(" ");
-                    let type = splits[0];
-                    let arg = splits[1];
-                    let desc = splits.slice(2).join(" ");
+                } else {
+                    const splits = remainder.split(" ");
+                    const skipArg = keywords[tag.slice(1)];
+                    let type, arg , desc;
+
+                    if (this.settings.typeInfo === null) {
+                        type = null;
+                        arg = skipArg ? "" : splits[0];
+                        desc = splits.slice(skipArg ? 0 : 1).join(" ");
+                    } else {
+                        type = splits[0];
+                        arg = skipArg ? "" : splits[1];
+                        desc = splits.slice(skipArg ? 1 : 2).join(" ");
+                    }
+
                     if (arg === "-") {
                         arg = "";
                     }
                     if (desc.charAt(0) === "-") {
                         desc = desc.slice(2);
                     }
+
                     out.push([
                         tag,
-                        type || "",
-                        arg  || "",
+                        type || null,
+                        arg || "",
                         desc || ""
                     ]);
                 }
@@ -162,9 +189,9 @@ class LanguageParser {
     }
 
     formatDocBlock(docBlock, config) {
-        let out = [];
-        let alignTags = config.alignTags;
-        let maxLength = [0, 0, 0, 0];
+        const out = [];
+        const alignTags = config.alignTags;
+        const maxLength = [];
 
         /**
          * Calculate max width of each column
@@ -173,7 +200,10 @@ class LanguageParser {
         if (alignTags > 0) {
             docBlock.forEach(entry => {
                 entry.forEach((e, idx) => {
-                    if (entry.length > 2 || (entry.length === 2 && idx === 0)) {
+                    if (idx > maxLength.length-1) {
+                        maxLength.push(0);
+                    }
+                    if (e !== null) {
                         e = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
                         maxLength[idx] = Math.max(maxLength[idx], e.length);
                     }
@@ -186,15 +216,20 @@ class LanguageParser {
 
         switch(this.settings.language) {
         case "javascript":
+        case "jsx":
             addEmptyLine = config.addEmptyLineJS;
             descSep = " - ";
             break;
         case "typescript":
+        case "tsx":
             addEmptyLine = config.addEmptyLineTS;
             descSep = " - ";
             break;
         case "php":
             addEmptyLine = config.addEmptyLinePHP;
+            break;
+        case "cpp": // C and LSL use the same parser
+            addEmptyLine = config.addEmptyLineCPP;
             break;
         }
 
@@ -203,11 +238,13 @@ class LanguageParser {
 
             let line = " *";
             entry.forEach((e, idx) => {
-                line += (idx === 3 ? descSep : " ") + e;
-                if (alignTags > idx) {
-                    let text = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
-                    let padding = maxLength[idx] - text.length;
-                    line += "".padEnd(padding);
+                if (e !== null) {
+                    line += (idx === maxLength.length-1 ? descSep : " ") + e;
+                    if (alignTags > idx) {
+                        const text = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
+                        const padding = maxLength[idx] - text.length;
+                        line += "".padEnd(padding);
+                    }
                 }
             });
             out.push(line.replace(/\s+$/, ""));
@@ -216,7 +253,7 @@ class LanguageParser {
                 out.push(" *");
 
             } else if (addEmptyLine === 2 && index < docBlock.length-1) {
-                let nextTag = docBlock[index+1][0];
+                const nextTag = docBlock[index+1][0];
                 if (nextTag !== entry[0]) {
                     out.push(" *");
                 }
@@ -229,10 +266,10 @@ class LanguageParser {
     }
 
     wrapLines(lines, wrapWidth) {
-        let out = [];
+        const out = [];
 
         for (const line of lines) {
-            
+
             if (line === "/**" || line === " */") {
                 out.push(line);
                 continue;
@@ -241,7 +278,11 @@ class LanguageParser {
             let tagPart;
             let txtPart;
 
-            let match = line.match(/^(\s\*\s+@(?:[^ ]+\s+){3}(?:-\s)?)(.+)$/);
+            const regex = this.settings.typeInfo === null
+                ? /^(\s\*\s+@(?:[^ ]+\s+){2}(?:-\s)?)(.+)$/
+                : /^(\s\*\s+@(?:[^ ]+\s+){3}(?:-\s)?)(.+)$/;
+
+            const match = line.match(regex);
             if (match) {
                 tagPart = match[1];
                 txtPart = match[2];
@@ -266,24 +307,25 @@ class LanguageParser {
     }
 
     formatClass(name, superClass) {
-        let out = [];
-        out.push(["${0:summary}"]);
-        
+        const out = [];
+        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
+
         if (superClass) {
-            out.push(['@extends ' + superClass]);
+            out.push(["@extends " + superClass]);
         }
         return out;
     }
 
     formatFunction(name, type, args, returnType) {
-        let out = [];
-        let tabOffset = 0;
 
         if (this.isStatement(name)) {
             return null;
         }
 
-        out.push(["${0:summary}"]);
+        const out = [];
+        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
+
+        let tabOffset = 0;
 
         // if there are arguments, add a @param for each
         if (args) {
@@ -291,25 +333,37 @@ class LanguageParser {
             // remove comments inside the argument list.
             args = args.replace(/\/\*.*?\*\//, "");
 
-            let parsedArgs = this.parseArgs(args);
+            const parsedArgs = this.parseArgs(args);
 
             parsedArgs.forEach(arg => {
                 let name = (arg[0].charAt(0) === "$" ? "\\" : "") + arg[0];
                 let type = arg[1];
                 let value = arg[2];
 
-                if (!type && value) {
-                    type = this.guessTypeFromValue(value);
-                }
+                if (this.settings.typeInfo === null) {
 
-                out.push([
-                    "@param",
-                    this.formatType((type || "type"), tabOffset+1),
-                    name,
-                    "${" + (tabOffset+2) + ":description}"
-                ]);
-                
-                tabOffset += 2;
+                    out.push([
+                        "@param",
+                        null,
+                        name,
+                        "${" + (tabOffset+1) + ":description}"
+                    ]);
+                    tabOffset += 1;
+
+                } else {
+
+                    if (!type && value) {
+                        type = this.guessTypeFromValue(value);
+                    }
+
+                    out.push([
+                        "@param",
+                        this.formatType((type || "type"), tabOffset+1),
+                        name,
+                        "${" + (tabOffset+2) + ":description}"
+                    ]);
+                    tabOffset += 2;
+                }
             });
         }
 
@@ -318,7 +372,16 @@ class LanguageParser {
         }
 
         tabOffset++;
-        if (type === "getter") {
+        if (this.settings.typeInfo === null) {
+            if (returnType && returnType !== "void") { // omit void return
+                out.push([
+                    this.settings.tags.keyRet,
+                    null,
+                    "",
+                    "${" + (tabOffset+1) + ":description}"
+                ]);
+            }
+        } else if (type === "getter") {
             out.push([
                 this.settings.tags.keyVar,
                 this.formatType("type", tabOffset),
@@ -345,33 +408,45 @@ class LanguageParser {
     }
 
     formatVar(name, type, value) {
-        let out = [];
+        const out = [];
 
         if (this.isStatement(name)) {
             return null;
         }
 
-        if (!type) {
-            type = this.guessTypeFromValue(value) || this.guessTypeFromName(name) || "type";
+        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
+
+        if (this.settings.typeInfo === null) {
+            out.push([
+                this.settings.tags.keyVar + " " +
+                name
+            ]);
+        } else {
+
+            if (!type) {
+                type = this.guessTypeFromValue(value) || this.guessTypeFromName(name) || "type";
+            }
+
+            out.push([
+                this.settings.tags.keyVar + " " +
+                this.formatType(type, 1)
+            ]);
         }
 
-        out.push(["${0:summary}"]);
-        out.push([
-            this.settings.tags.keyVar + " " +
-            this.formatType(type, 1)
-        ]);
-    
         return out;
     }
 
     formatType(type, tabStop) {
-        type = type ? type.replaceAll("\\", "\\\\") : type;
-        type = "${" + tabStop + ":" + type + "}";
-        return this.settings.typeFormat.replace("%s", type);
+        if (this.settings.typeInfo !== null) {
+            type = type ? type.replaceAll("\\", "\\\\") : type;
+            type = "${" + tabStop + ":" + type + "}";
+            return this.settings.typeInfo.replace("%s", type);
+        }
+        return null;
     }
 
     parseArgs(raw) {
-        let out = [];
+        const out = [];
         if(!raw) {
             return out;
         }
@@ -401,7 +476,7 @@ class LanguageParser {
 
             } else if (isQuote) {
                 arg += char;
-                if (char == matchingQuote) {
+                if (char === matchingQuote) {
                     isQuote = false;
                 }
 
@@ -413,7 +488,7 @@ class LanguageParser {
             } else if (char === "[") {
                 arg += char;
                 arrayDepth++;
-                
+
             } else if (char === "]") {
                 arg += char;
                 arrayDepth--;
@@ -421,7 +496,7 @@ class LanguageParser {
             } else if (char === "{") {
                 arg += char;
                 objDepth++;
-                
+
             } else if (char === "}") {
                 arg += char;
                 objDepth--;
@@ -456,7 +531,7 @@ class LanguageParser {
         }
         return null;
     }
-    
+
     guessTypeFromValue(value) {
         if (!value) {
             return null;
@@ -471,6 +546,7 @@ class LanguageParser {
         if ((value[0] === "'") || (value[0] === "\"")) {
             return "string";
         }
+        /* eslint-disable-next-line eqeqeq */
         if (value.slice(0, 5) == "array" || value[0] === "[") {
             return "Array";
         }
@@ -480,13 +556,13 @@ class LanguageParser {
         if ((value.toLowerCase() === "true") || (value.toLowerCase() === "false")) {
             return "boolean";
         }
-        let regex = new RegExp('^RegExp|^\\/[^/*].*\\/$');
+        let regex = new RegExp("^RegExp|^\\/[^/*].*\\/$");
         if (regex.test(value)) {
             return "RegExp";
         }
         if (value.slice(0, 4) === "new ") {
             regex = new RegExp("new (" + this.settings.fnIdentifier + ")");
-            var matches = regex.exec(value);
+            const matches = regex.exec(value);
             return (matches[0] && matches[1]) || null;
         }
         return null;

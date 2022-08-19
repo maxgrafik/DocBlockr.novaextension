@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.6.1",
+    "version": "0.8.0",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -16,7 +16,10 @@
         "onLanguage:typescript",
         "onLanguage:php",
         "onLanguage:jsx",
-        "onLanguage:tsx"
+        "onLanguage:tsx",
+        "onLanguage:cpp",
+        "onLanguage:c",
+        "onLanguage:lsl"
     ],
 
     "commands": {
@@ -26,7 +29,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"]
                 }
             },
             {
@@ -34,7 +37,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.formatDocBlock",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"]
                 }
             }
         ],
@@ -45,7 +48,7 @@
                 "shortcut": "return",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"]
                 }
             },
             {
@@ -54,7 +57,7 @@
                 "shortcut": "tab",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyTab",
                 "filters": {
-                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx"]
+                    "syntaxes": ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"]
                 }
             }
         ]
@@ -82,6 +85,12 @@
                 {
                     "key": "maxgrafik.DocBlockr.config.enablePHP",
                     "title": "PHP",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.enableCPP",
+                    "title": "C/C++",
                     "type": "boolean",
                     "default": true
                 }
@@ -114,6 +123,14 @@
                     "type": "enum",
                     "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
                     "default": 2,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.addEmptyLineCPP",
+                    "title": "C/C++",
+                    "type": "enum",
+                    "values": [[1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "default": 1,
                     "radio": false
                 },
                 {
@@ -151,6 +168,13 @@
                     "description": "Pressing enter inside a docblock will automatically insert a leading asterisk",
                     "type": "boolean",
                     "default": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.ESLintComments",
+                    "title": "ESLint Comment",
+                    "description": "Just a convenience to quickly insert /* eslint-disable-next-line */ comments. Yes, I’m lazy ;)",
+                    "type": "boolean",
+                    "default": false
                 }
             ]
         }
@@ -185,6 +209,14 @@
                     "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
                     "radio": false,
                     "default": null
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enableCPP",
+                    "title": "C/C++",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "radio": false,
+                    "default": null
                 }
             ]
         },
@@ -212,6 +244,14 @@
                 {
                     "key": "maxgrafik.DocBlockr.workspace.addEmptyLinePHP",
                     "title": "PHP",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
+                    "radio": false,
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.addEmptyLineCPP",
+                    "title": "C/C++",
                     "type": "enum",
                     "values": [[null, "Use global settings"], [1, "Add empty line after summary"], [2, "Add empty line between sections"], [0, "Don’t add empty lines"]],
                     "radio": false,

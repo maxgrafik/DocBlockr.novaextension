@@ -1,4 +1,8 @@
 const LanguageParser = require("languages/parser.js");
+const JavaScriptParser = require("languages/javascript.js");
+const TypeScriptParser = require("languages/typescript.js");
+const PHPParser = require("languages/php.js");
+const CPPParser = require("languages/cpp.js");
 const CompletionProvider = require("completionProvider.js");
 
 /**
@@ -8,7 +12,7 @@ const CompletionProvider = require("completionProvider.js");
 class CommandHandler {
 
     constructor(config) {
-        this.config = config
+        this.config = config;
     }
 
     insertDocBlock(editor) {
@@ -26,17 +30,13 @@ class CommandHandler {
             }
         );
 
-        if (items.length === 0) {
+        if (!items.length || !items[0].additionalTextEdits.length) {
             return;
         }
-    
-        // adjust indentation of consecutive lines
-        let snippet = items[0].insertText;
-        let indent = /^[\t ]*/.exec(currentLine)[0];
-        
-        snippet = snippet
-            .split(editor.document.eol)
-            .join(editor.document.eol + indent);
+
+        // snippet is already properly indented!
+        // see bugfix in completionProvider -> createCompletionItem
+        const snippet = items[0].insertText || items[0].additionalTextEdits[0].newText;
 
         editor.insert(snippet, InsertTextFormat.Snippet);
     }
@@ -49,8 +49,8 @@ class CommandHandler {
             return;
         }
 
-        let selectedRanges = editor.selectedRanges;
-        let adjustedRanges = []
+        const selectedRanges = editor.selectedRanges;
+        const adjustedRanges = [];
 
         // fix incomplete or zero-length selections so
         // adjustedRanges contains only complete docblocks
@@ -65,7 +65,7 @@ class CommandHandler {
                     adjustedRanges.push(
                         new Range(docBlockStart, docBlockEnd)
                     );
-                } 
+                }
             });
         });
 
@@ -82,14 +82,15 @@ class CommandHandler {
     }
 
     /**
-     * Get ranges of all docblocks in document
+     * Get ranges of all (complete!) docblocks in document
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
             // added negative lookahead (?!/**)
             // to not match unfinished docblocks
-            "^[\\t ]*\\/\\*\\*(?:(?!\\/\\*\\*).)+?\\*\\/[\\t ]*$"
-        , "gms");
+            "^[\\t ]*\\/\\*\\*(?:(?!\\/\\*\\*).)+?\\*\\/[\\t ]*$",
+            "gms"
+        );
 
         const range = new Range(0, editor.document.length);
         const text = editor.getTextInRange(range);
@@ -99,7 +100,7 @@ class CommandHandler {
             return null;
         }
 
-        let ranges = [];
+        const ranges = [];
         for (const match of matches) {
             ranges.push(
                 new Range(match.index, match.index+match[0].length)
@@ -118,9 +119,27 @@ class CommandHandler {
 
         const WrapGuideColumn = 80; // any way to read this from nova prefs?
 
-        const parser = new LanguageParser({
-            language: editor.document.syntax
-        });
+        let parser;
+        switch (editor.document.syntax) {
+        case "javascript":
+        case "jsx":
+            parser = new JavaScriptParser();
+            break;
+        case "typescript":
+        case "tsx":
+            parser = new TypeScriptParser();
+            break;
+        case "php":
+            parser = new PHPParser();
+            break;
+        case "cpp":
+        case "c":
+        case "lsl":
+            parser = new CPPParser();
+            break;
+        default:
+            parser = new LanguageParser({language: editor.document.syntax});
+        }
 
         // do everything in one edit so we can undo in one step
         editor.edit((edit) => {
@@ -132,7 +151,7 @@ class CommandHandler {
                 docBlock = parser.parseDocBlock(docBlock);
                 if (docBlock.length > 0) {
                     let snippet = parser.formatDocBlock(docBlock, this.config);
-                    let wrapWidth = WrapGuideColumn-indent.length;                    
+                    let wrapWidth = WrapGuideColumn-indent.length;
 
                     snippet = indent + parser
                         .wrapLines(snippet, wrapWidth)

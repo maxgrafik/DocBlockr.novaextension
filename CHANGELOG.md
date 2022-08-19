@@ -1,3 +1,16 @@
+## Version 0.8.0
+
+* v0.6.1 introduced a new bug, so I reviewed the whole code and found even more bugs and weird stuff some of which I for the life of me can't remember why I did.
+* Additionally Nova’s indentation logic breaks DocBlockr in many cases, so I have also rewritten that part. Hoping this won’t introduce new bugs.
+
+
+## Version 0.7.0
+
+* Portuguese translation by [Gwyneth Llewelyn](https://github.com/GwynethLlewelyn)
+* German language additions ([Gwyneth Llewelyn](https://github.com/GwynethLlewelyn))
+* C/C++ support ... also requested by Gwyneth ;^)
+
+
 ## Version 0.6.1
 
 * Bugfix

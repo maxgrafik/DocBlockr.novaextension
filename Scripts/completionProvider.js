@@ -1,6 +1,7 @@
 const JavaScriptParser = require("languages/javascript.js");
 const TypeScriptParser = require("languages/typescript.js");
 const PHPParser = require("languages/php.js");
+const CPPParser = require("languages/cpp.js");
 
 /**
  * Completion Provider
@@ -11,6 +12,7 @@ class CompletionProvider {
     constructor(config) {
         this.config = config;
         this.eol = "\n";
+        this.indent = "";
         this.cursorPosition = 0;
     }
 
@@ -33,6 +35,9 @@ class CompletionProvider {
         if (syntax === "php" && !this.config.enablePHP) {
             return [];
         }
+        if (["cpp", "c", "lsl"].includes(syntax) && !this.config.enableCPP) {
+            return [];
+        }
 
         const line = context.line.trim();
 
@@ -41,12 +46,21 @@ class CompletionProvider {
             return [];
         }
 
+        // get EOL, indentation and cursor position for creating completion items
         this.eol = editor.document.eol;
+        this.indent = /^[\t ]*/.exec(context.line)[0];
         this.cursorPosition = context.position;
 
         // return inline comment if line NOT only contains trigger chars
         if (line.endsWith("/**") && line !== "/**") {
             return [this.provideInlineComment()];
+        }
+
+        const text = editor.getTextInRange(new Range(this.cursorPosition, editor.document.length));
+
+        // provide block comment if EOF
+        if (!text.match(/^[\t ]*(.+)$/m)) {
+            return [this.provideBlockComment()];
         }
 
         let parser;
@@ -63,9 +77,23 @@ class CompletionProvider {
         case "php":
             parser = new PHPParser();
             break;
+        case "cpp":
+        case "c":
+        case "lsl":
+            parser = new CPPParser();
+            break;
         default:
             return [];
         }
+
+        /**
+         * We need to disable keydown handling for the comment extender when
+         * providing completion items. Otherwise the comment extender kicks in
+         * causing all kinds of problems
+         */
+        nova.workspace.context.set("maxgrafik.DocBlockr.evt.keyReturn", false);
+        nova.workspace.context.set("maxgrafik.DocBlockr.evt.keyTab", false);
+
 
         // provide tag completion if "@"
         if (line.match(/^\*\s+@/)) {
@@ -75,56 +103,66 @@ class CompletionProvider {
             );
         }
 
-        let completionItems = [];
 
-        const text = editor.getTextInRange(new Range(this.cursorPosition, editor.document.length));
+        const completionItems = [];
 
-        // provide block comment if EOF
-        if (!text.match(/^[\t ]*(.+)$/m)) {
-            return [this.provideBlockComment()];
-        }
-
-        // provide block comment if next is another comment
-        if (text.trim().match(/^\/(\*|\/)/)) {
-            return [this.provideBlockComment()];
-        }
-
-        // split text into lines and get closest definition
-        const lines = text.split(this.eol);
-        const definition = parser.getDefinition(lines);
-
-        // provide block comment if no definition
-        if (definition === "") {
-            completionItems.push(this.provideBlockComment());
-        }
-
-        // parse definition and get docBlock
-        if (definition !== "") {
-            const docBlock = parser.parseDefinition(definition);
-            if (!docBlock) {
-                // provide block comment if no docBlock returned
-                completionItems.push(this.provideBlockComment());
-            } else {
-                // we finally have a docBlock, yay!
-                const snippet = parser.formatDocBlock(docBlock, this.config);
-                completionItems.push(
-                    this.createCompletionItem(
-                        "/** DocBlock */",
-                        snippet.join(this.eol),
-                        "Insert a code documentation block"
-                    )
-                );
-            }
-        }
-
+        // provide header block if start of file
         const prePos  = Math.max(0, this.cursorPosition-3);
         const preText = editor.getTextInRange(new Range(0, prePos)).trim();
 
-        // provide header block if start of file
         if (preText === "" || preText === "<?php") {
             completionItems.push(
                 this.provideHeaderBlock(parser)
             );
+        }
+
+
+        // split text into lines
+        const lines = text.split(this.eol);
+
+        // provide block comment if next is another comment or an empty line
+        if (
+            text.trim().match(/^\/(\*|\/)/) ||
+            (lines.length > 1 && lines[0].trim() === "" && lines[1].trim() === "")
+        ) {
+            completionItems.push(
+                this.provideBlockComment()
+            );
+
+        } else {
+
+            // get closest definition
+            const definition = parser.getDefinition(lines);
+
+            // provide block comment if no definition
+            if (definition === "") {
+                completionItems.push(this.provideBlockComment());
+            }
+
+            // parse definition and get docBlock
+            if (definition !== "") {
+                const docBlock = parser.parseDefinition(definition);
+                if (!docBlock) {
+                    // provide block comment if no docBlock returned
+                    completionItems.push(this.provideBlockComment());
+                } else {
+                    // we finally have a docBlock, yay!
+                    const snippet = parser.formatDocBlock(docBlock, this.config);
+                    completionItems.push(
+                        this.createCompletionItem(
+                            "/** DocBlock */",
+                            snippet.join(this.eol),
+                            "Insert a code documentation block"
+                        )
+                    );
+                }
+            }
+        }
+
+        // Not related to DocBlockr,
+        // but I'm too lazy to type ESLint disable rules
+        if (this.config.ESLintComments) {
+            completionItems.push(this.provideESLintComment());
         }
 
         return completionItems;
@@ -138,8 +176,8 @@ class CompletionProvider {
      * @returns {CompletionItem}
      */
     createCompletionItem(label, text, documentation) {
-        let item = new CompletionItem(label, CompletionItemKind.StyleDirective);
-        item.insertText = text;
+        const item = new CompletionItem(label, CompletionItemKind.StyleDirective);
+        item.insertText = (this.cursorPosition === null) ? text : "";
         item.insertTextFormat = InsertTextFormat.Snippet;
         if (documentation !== null) {
             item.documentation = documentation;
@@ -149,7 +187,37 @@ class CompletionProvider {
                 Math.max(0, this.cursorPosition-3),
                 this.cursorPosition
             );
+
+            /**
+             * Working around Nova's weird indentation logic:
+             * We insert an empty string above (insertText), replacing '/**'
+             * and put the actual snippet into an additional TextEdit
+             *
+             * However, here's more weirdness:
+             * insertPosition should be currentPosition-3, accounting for '/**'
+             * but it doesn't make any difference if we use cursorPosition as is
+             * or cursorPosition-3
+             * Even worse, substracting e.g. 2 does not throw an error because
+             * of overlapping regions, it crashes Nova immediately
+             *
+             * We also need to add proper indentation here (and likewise remove
+             * it from commandHandler) in case automatic indentation is turned
+             * off in preferences. For now, Nova seems to be clever enough to
+             * handle this manual indentation correctly
+             *
+             * Nevertheless, I expect this to fail again anytime :P
+             */
+
+            const insertPosition = Math.max(0, this.cursorPosition /* -3 */);
+
+            item.additionalTextEdits = [
+                TextEdit.insert(
+                    insertPosition,
+                    text.split(this.eol).join(this.eol + this.indent)
+                )
+            ];
         }
+
         return item;
     }
 
@@ -182,7 +250,7 @@ class CompletionProvider {
      * @returns {Array}
      */
     provideTags(matches) {
-        let items = [];
+        const items = [];
         matches.forEach(match => {
             items.push(
                 this.createCompletionItem(
@@ -190,7 +258,7 @@ class CompletionProvider {
                     match[0] + (match[1] ? " " + match[1] : ""),
                     null
                 )
-            )
+            );
         });
         return items;
     }
@@ -201,8 +269,8 @@ class CompletionProvider {
      * @returns {CompletionItem}
      */
     provideHeaderBlock(parser) {
-        let docBlock = [];
-        let regex = new RegExp(
+        const docBlock = [];
+        const regex = new RegExp(
             "^(?<tag>@[^\\s]+)?" +
             "(?:\\s*(?<remainder>.+))?$"
         );
@@ -211,7 +279,7 @@ class CompletionProvider {
 
         if (this.config.customTags && this.config.customTags.length) {
             this.config.customTags.forEach(tag => {
-                let match = regex.exec(tag);
+                const match = regex.exec(tag);
                 if (!match) {
                     docBlock.push([tag]);
 
@@ -219,7 +287,7 @@ class CompletionProvider {
                     docBlock.push([match.groups.tag, match.groups.remainder]);
 
                 } else if (match && !match.groups.remainder) {
-                    let docTags = parser.getDocTags("* " + match.groups.tag);
+                    const docTags = parser.getDocTags("* " + match.groups.tag);
                     if (docTags.length > 0) {
                         docBlock.push(["@"+docTags[0][0], docTags[0][1]]);
                     } else {
@@ -245,6 +313,18 @@ class CompletionProvider {
             "/** Header */",
             snippet.join(this.eol),
             "Insert a header block"
+        );
+    }
+
+    /**
+     * Provide eslint configuration comment
+     * @returns {CompletionItem}
+     */
+    provideESLintComment() {
+        return this.createCompletionItem(
+            "/* ESLint comment */",
+            "/* eslint-disable-next-line ${0:rule} */",
+            "ESLint configuration comment"
         );
     }
 
