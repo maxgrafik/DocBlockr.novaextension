@@ -36,9 +36,32 @@ class CPPParser extends LanguageParser {
     }
 
     parseClass(line) {
+        const attributes = "(?:\\[\\[[^\\]]*\\]\\]\\s*)*";
+        const baseClass =
+            // attributes
+            "(\\s*" + attributes +
+            // access-specifier
+            "\\s*(?:(?:virtual|private|public|protected)\\s*)*" +
+            // class name
+            "\\s*(?<baseClass>" + this.settings.varIdentifier + ")" +
+            // comma
+            "\\s*,?)";
+
         let regex = new RegExp(
-            "^class\\s*(?<name>" + this.settings.varIdentifier + ")" +
-            "(?<base>(?:[:,]\\s*public\\s*" + this.settings.varIdentifier + ")*)"
+            // class-key
+            "(?:class|struct|union)" +
+            // attributes
+            "\\s*" + attributes +
+            // class-head-name
+            "\\s*" + "(?<className>" + this.settings.varIdentifier + ")" +
+            // final
+            "\\s*(?:final)?" +
+            // base-clause
+            "\\s*(?<baseClause>" +
+            // colon + one or more base classes
+            "\\s*:" + baseClass + "+" +
+            // base-clause end
+            ")?"
         );
 
         let match = regex.exec(line);
@@ -46,23 +69,25 @@ class CPPParser extends LanguageParser {
             return null;
         }
 
-        let className = match.groups.name;
-        let baseClass = match.groups.base;
+        const className  = match.groups.className;
+        const baseClause = match.groups.baseClause;
 
-        if (baseClass) {
-            regex = new RegExp("(?:public\\s*)(" + this.settings.varIdentifier + ")", "g");
+        let classList = "";
+
+        if (baseClause) {
+            regex = new RegExp(baseClass, "g");
 
             const arr = [];
-            while ((match = regex.exec(baseClass)) !== null) {
+            while ((match = regex.exec(baseClause)) !== null) {
                 if (match.index === regex.lastIndex) {
                     regex.lastIndex++;
                 }
-                arr.push(match[1]);
+                arr.push(match.groups.baseClass);
             }
-            baseClass = arr.join(", ");
+            classList = arr.join(", ");
         }
 
-        return [className, baseClass];
+        return [className, classList];
     }
 
     parseFunction(line) {
