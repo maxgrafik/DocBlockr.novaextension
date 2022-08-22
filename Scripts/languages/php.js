@@ -15,55 +15,58 @@ class PHPParser extends LanguageParser {
          * @property {string} varIdentifier - Valid chars for vars/args
          * @property {string} fnIdentifier  - Valid chars for functions
          * @property {string} clsIdentifier - Valid chars for classes
-         * @property {string} typeFormat    - Format of param types
+         * @property {string} typeInfo      - Format of param type
          * @property {Object} tags          - Language specific tags
          */
-        let validChars = "[a-zA-Z_$\\x7f-\\xff][a-zA-Z0-9_$\\x7f-\\xff]*";
-        let settings = {
+        const validChars = "[a-zA-Z_$\\x7f-\\xff][a-zA-Z0-9_$\\x7f-\\xff]*";
+        const settings = {
             language: "php",
             varIdentifier : validChars + "(?:->" + validChars + ")*",
             fnIdentifier : validChars,
             clsIdentifier : validChars,
-            typeFormat: "%s",
+            typeInfo: "%s",
             tags: {
+                keySummary: "summary",
                 keyVar: "@var",
                 keyRet: "@return"
-            }
+            },
+            commentStyle: "/**"
         };
         super(settings);
     }
 
     parseClass(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "^\\s*(?:abstract\\s+)?class\\s+" +
             "(?<name>" + this.settings.clsIdentifier + ")" +
             "(:?\\s+extends\\s+(?<extends>" + this.settings.clsIdentifier + "))?"
         );
-        
-        let match = regex.exec(line);
+
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
-        
+
         return [match.groups.name, match.groups.extends];
     }
 
     parseFunction(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "^\\s*(?:(?<modifier>(?:(?:(?:final|abstract)\\s+)?(?:public|protected|private)\\s+)?(?:final\\s+)?(?:static\\s+)?))?" +
             "function\\s+&?(?:\\s+)?" +
             "(?<name>" + this.settings.fnIdentifier + ")\\s*" +
-            
-            // FAIL: does not match nested parenthesis ...
+
+            // https://github.com/maxgrafik/DocBlockr.novaextension/issues/2
+            // Does not match nested parentheses ...
             "\\(\\s*(?<args>.*?)\\)" +
-            
+
             // ... but recursion is not (yet) supported :(
             //"(?<parentheses>\\((?<args>(?:(?>[^()]+)|(?&parentheses))*)\\))" +
 
             "(?:\\s*\\:\\s*(?<nullable>\\?)?(?<rettype>[a-zA-Z0-9_\\x5c]*))?"
         );
 
-        let matches = regex.exec(line);
+        const matches = regex.exec(line);
         if(!matches) {
             return null;
         }
@@ -89,13 +92,13 @@ class PHPParser extends LanguageParser {
     }
 
     parseVar(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "^\\s*(?:(?<modifier>var|static|const|(?:final)(?:public|private|protected)(?:\\s+final)(?:\\s+static)?)\\s+)?" +
             "(?<name>" + this.settings.varIdentifier + ")" +
             "(?:\\s*=>?\\s*(?<value>.*?)(?:[;,]|$))?"
         );
 
-        var match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
@@ -108,8 +111,8 @@ class PHPParser extends LanguageParser {
     }
 
     parseArg(line) {
-        let clsIdentifier = "[a-zA-Z_$\\\\x7f-\\xff][a-zA-Z0-9_$\\\\x7f-\\xff]*";
-        let keywords = "string|integer|int|boolean|bool|float|double|object|mixed|array|resource|void|null|callable|false|true|self|scalar";
+        const clsIdentifier = "[a-zA-Z_$\\\\x7f-\\xff][a-zA-Z0-9_$\\\\x7f-\\xff]*";
+        const keywords = "string|integer|int|boolean|bool|float|double|object|mixed|array|resource|void|null|callable|false|true|self|scalar";
         let regex = new RegExp(
             "(?:(?<type>" + keywords + ")|(?<class>" + clsIdentifier + "))\\s+(?<splat>\\.{3})?(?<name>" + this.settings.varIdentifier + ")"
         );
@@ -126,7 +129,7 @@ class PHPParser extends LanguageParser {
         regex = new RegExp(
             "(?<splat>\\.{3})(?<name>" + this.settings.varIdentifier + ")"
         );
-        
+
         match = regex.exec(line);
         if (match) {
             return [match.groups.name, "Array", null];
@@ -170,18 +173,18 @@ class PHPParser extends LanguageParser {
             ["version", "${0:version} ${1:description}"]
         ];
 
-        let regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+        const regex = new RegExp(
+            /^\*\s+@(?<tag>.*)/
         );
 
-        let match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return [];
         }
 
-        let matches = [];
-        let typed = match.groups.tag;
-        
+        const matches = [];
+        const typed = match.groups.tag;
+
         tags.forEach(tag => {
             if (tag[0].includes(typed)) {
                 matches.push(tag);

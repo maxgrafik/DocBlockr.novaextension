@@ -15,42 +15,44 @@ class JavaScriptParser extends LanguageParser {
          * @property {string} varIdentifier - Valid chars for vars/args
          * @property {string} fnIdentifier  - Valid chars for functions
          * @property {string} clsIdentifier - Valid chars for classes
-         * @property {string} typeFormat    - Format of param types
+         * @property {string} typeInfo      - Format of param type
          * @property {Object} tags          - Language specific tags
          */
-        let validChars = "[a-zA-Z_$][a-zA-Z_$0-9]*";
-        let settings = {
+        const validChars = "[a-zA-Z_$][a-zA-Z_$0-9]*";
+        const settings = {
             language: "javascript",
             varIdentifier: validChars,
             fnIdentifier: validChars,
             clsIdentifier: validChars,
-            typeFormat: "{%s}",
+            typeInfo: "{%s}",
             tags: {
+                keySummary: "summary",
                 keyVar: "@type",
                 keyRet: "@returns"
-            }
+            },
+            commentStyle: "/**"
         };
         super(settings);
     }
 
     parseClass(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "^\\s*class\\s+" +
             "(?<name>" + this.settings.clsIdentifier + ")" +
             "(:?\\s+extends\\s+(?<extends>" + this.settings.clsIdentifier + "))?"
         );
-        
-        let match = regex.exec(line);
+
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
-        
+
         return [match.groups.name, match.groups.extends];
     }
 
     parseFunction(line) {
         // quotes indicate what will be matched in each line
-        let preFunction = "^" +
+        const preFunction = "^" +
             // "  "var foo = function bar (baz, quaz) {}
             "\\s*" +
             "(?:" +
@@ -68,10 +70,10 @@ class JavaScriptParser extends LanguageParser {
                 // var "foo = "function bar (baz, quaz) {}
                 "(?<name1>" + this.settings.varIdentifier + ")\\s*[:=]\\s*" +
             ")?";
-        
-        let modifiers = "(?:\\bstatic\\s+)?(?<promise>\\basync\\s+)?";
-        
-        let functionRegex = new RegExp(
+
+        const modifiers = "(?:\\bstatic\\s+)?(?<promise>\\basync\\s+)?";
+
+        const functionRegex = new RegExp(
             preFunction +
             modifiers +
             // var foo = "function "bar (baz, quaz) {}
@@ -81,8 +83,8 @@ class JavaScriptParser extends LanguageParser {
             // var foo = function bar "(baz, quaz)" {}
             "\\(\\s*(?<args>.*?)\\)"
         );
-        
-        let methodRegex = new RegExp(
+
+        const methodRegex = new RegExp(
             "^" +
             "\\s*" +
             modifiers +
@@ -91,8 +93,8 @@ class JavaScriptParser extends LanguageParser {
             "\\(\\s*(?<args>.*?)\\)\\s*" +
             "{"
         );
-        
-        let getterSetterMethodRegex = new RegExp(
+
+        const getterSetterMethodRegex = new RegExp(
             "^" +
             "\\s*" +
             "(?<getter>get|set)\\s+" +
@@ -100,8 +102,8 @@ class JavaScriptParser extends LanguageParser {
             "\\(\\s*(?<args>.*?)\\)\\s*" +
             "{"
         );
-        
-        let arrowFunctionRegex = new RegExp(
+
+        const arrowFunctionRegex = new RegExp(
             preFunction +
             "(?<promise>async\\s+)?" +
             "(?:"+
@@ -114,26 +116,26 @@ class JavaScriptParser extends LanguageParser {
             // var foo = bar "=>" {}
             "=>\\s*"
         );
-        
+
         let functionMatch = null;
         let methodMatch = null;
         let getterMatch = null;
 
-        let matches = (
-            (functionMatch = functionRegex.exec(line)) || 
-            (methodMatch = methodRegex.exec(line)) || 
-            (getterMatch = getterSetterMethodRegex.exec(line)) || 
+        const matches = (
+            (functionMatch = functionRegex.exec(line)) ||
+            (methodMatch = methodRegex.exec(line)) ||
+            (getterMatch = getterSetterMethodRegex.exec(line)) ||
             arrowFunctionRegex.exec(line)
         );
-        
+
         if (matches === null) {
             return null;
         }
 
         // grab the name out of "name1 = function name2(foo)" preferring name1
-        let name = matches.groups.name1 || matches.groups.name2 || "";
-        let args = matches.groups.args || matches.groups.arg || null;
-        
+        const name = matches.groups.name1 || matches.groups.name2 || "";
+        const args = matches.groups.args || matches.groups.arg || null;
+
         let type = null;
         let returnType = null;
 
@@ -153,20 +155,20 @@ class JavaScriptParser extends LanguageParser {
         if (matches.groups.promise) {
             returnType = "Promise";
         }
-        
+
         return [name, type, args, returnType];
     }
 
     parseVar(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "(?<name>" + this.settings.varIdentifier + ")\\s*[=:]\\s*(?<value>.*?)(?:[;,]|$)"
         );
 
-        let match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
-        
+
         return [match.groups.name, null, match.groups.value];
     }
 
@@ -175,12 +177,12 @@ class JavaScriptParser extends LanguageParser {
         let regex = new RegExp(
             "\\.{3}(?<name>" + this.settings.varIdentifier + ")"
         );
-        
+
         let match = regex.exec(line);
         if (match) {
             return [match.groups.name, "Array", null];
         }
-        
+
         // destructuring assignment
         regex = new RegExp(
             "^(?<object>\\{.*\\})|^(?<array>\\[.*\\])"
@@ -276,18 +278,18 @@ class JavaScriptParser extends LanguageParser {
             ["yields", "{${0:type}} - ${1:description}"]
         ];
 
-        let regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+        const regex = new RegExp(
+            /^\*\s+@(?<tag>.*)/
         );
 
-        let match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return [];
         }
 
-        let matches = [];
-        let typed = match.groups.tag;
-        
+        const matches = [];
+        const typed = match.groups.tag;
+
         tags.forEach(tag => {
             if (tag[0].includes(typed)) {
                 matches.push(tag);

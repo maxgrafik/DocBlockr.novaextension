@@ -5,14 +5,23 @@ const CommentExtender = require("commentExtender.js");
 const CommandHandler = require("commandHandler.js");
 
 const config = {
-    enableJS  : true,
-    enableTS  : false,
-    enablePHP : true,
-    addEmptyLineJS  : 0,
-    addEmptyLineTS  : 0,
-    addEmptyLinePHP : 2,
+    enableCPP  : true,
+    enableJava : true,
+    enableJS   : true,
+    enableObjC : true,
+    enablePHP  : true,
+    enableRust : true,
+    enableTS   : true,
+    addEmptyLineCPP  : 1,
+    addEmptyLineJava : 1,
+    addEmptyLineJS   : 0,
+    addEmptyLineObjC : 1,
+    addEmptyLinePHP  : 2,
+    addEmptyLineTS   : 0,
     alignTags : 0,
-    extendComments : false
+    commentStyle : 0,
+    extendComments : false,
+    ESLintComments : false
 };
 
 exports.activate = function() {
@@ -50,13 +59,13 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["javascript", "typescript", "php", "jsx", "tsx"],
+        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "typescript", "tsx"],
         new CompletionProvider(config),
         {
-            triggerChars: new Charset("*@")
+            triggerChars: new Charset("*@\\")
         }
     );
-    
+
     /**
      * Register Command Handlers
      */
@@ -75,19 +84,19 @@ exports.activate = function() {
     if (config.extendComments) {
         registerCommentExtender();
     }
-}
+};
 
 exports.deactivate = function() {
     unregisterCommentExtender();
-}
+};
 
 
 /**
  * Helper functions
  */
 
-let events = new CompositeDisposable();
-let extenders = new Map();
+const events = new CompositeDisposable();
+const extenders = new Map();
 
 function registerCommentExtender() {
 
@@ -99,7 +108,7 @@ function registerCommentExtender() {
             }
         })
     );
-    
+
     events.add(
         nova.commands.register("maxgrafik.DocBlockr.cmd.insertTab", editor => {
             const commentExtender = extenders.get(editor.document.uri);
@@ -111,20 +120,47 @@ function registerCommentExtender() {
 
     events.add(
         nova.workspace.onDidAddTextEditor(editor => {
-            
-            const syntax = editor.document.syntax;
+
+            let isEnabled = false;
+
+            /**
+             * Switched to 'switch' statement
+             * as suggested by gwyneth (20220817)
+             */
+
+            switch(editor.document.syntax) {
+            case "c":
+            case "cpp":
+            case "lsl":
+                isEnabled = config.enableCPP;
+                break;
+            case "java":
+                isEnabled = config.enableJava;
+                break;
+            case "javascript":
+            case "jsx":
+                isEnabled = config.enableJS;
+                break;
+            case "objc":
+                isEnabled = config.enableObjC;
+                break;
+            case "php":
+                isEnabled = config.enablePHP;
+                break;
+            case "rust":
+                // There's no point in extending Rust comments
+                isEnabled = false;
+                break;
+            case "typescript":
+            case "tsx":
+                isEnabled = config.enableTS;
+                break;
+            default:
+                isEnabled = false;
+            }
 
             // skip if not enabled for language
-            if (!["javascript", "typescript", "php", "jsx", "tsx"].includes(syntax)) {
-                return;
-            }
-            if ((syntax === "javascript" || syntax === "jsx") && !config.enableJS) {
-                return;
-            }
-            if ((syntax === "typescript" || syntax === "tsx") && !config.enableTS) {
-                return;
-            }
-            if (syntax === "php" && !config.enablePHP) {
+            if (!isEnabled) {
                 return;
             }
 

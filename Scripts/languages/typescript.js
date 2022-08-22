@@ -15,57 +15,59 @@ class TypeScriptParser extends LanguageParser {
          * @property {string} varIdentifier - Valid chars for vars/args
          * @property {string} fnIdentifier  - Valid chars for functions
          * @property {string} clsIdentifier - Valid chars for classes
-         * @property {string} typeFormat    - Format of param types
+         * @property {string} typeInfo      - Format of param type
          * @property {Object} tags          - Language specific tags
          */
-        let validChars = "[a-zA-Z_$][a-zA-Z_$0-9]*";
-        let settings = {
+        const validChars = "[a-zA-Z_$][a-zA-Z_$0-9]*";
+        const settings = {
             language: "typescript",
             varIdentifier: validChars,
             fnIdentifier: validChars,
             clsIdentifier: validChars,
-            typeFormat: "{%s}",
+            typeInfo: "{%s}", // if TypeScript were really that strongly typed, this should be null :P
             tags: {
+                keySummary: "summary",
                 keyVar: "@type",
                 keyRet: "@returns"
-            }
+            },
+            commentStyle: "/**"
         };
         super(settings);
 
-        let baseType = validChars + '(\\.' + validChars + ')*(\\[\\])?';
-        this.parametricType = baseType + '(\\s*<\\s*' + baseType + '(\\s*,\\s*' + baseType + '\\s*)*>)?';
+        const baseType = validChars + "(\\." + validChars + ")*(\\[\\])?";
+        this.parametricType = baseType + "(\\s*<\\s*" + baseType + "(\\s*,\\s*" + baseType + "\\s*)*>)?";
     }
 
     parseClass(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             "^\\s*class\\s+" +
             "(?<name>" + this.settings.clsIdentifier + ")" +
             "(:?\\s+extends\\s+(?<extends>" + this.settings.clsIdentifier + "))?"
         );
-        
-        let match = regex.exec(line);
+
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
-        
+
         return [match.groups.name, match.groups.extends];
     }
 
     parseFunction(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             // Modifiers
             "(?:public|private|static)?\\s*" +
             // Method name
             "(?<name>" + this.settings.fnIdentifier + ")\\s*" +
             // Type parameter
-            "(?<typeparam><[^>]+>)?\\s*" + 
+            "(?<typeparam><[^>]+>)?\\s*" +
             // Params
             "\\((?<args>.*?)\\)\\s*" +
             // Return value
             "(:\\s*(?<rettype>" + this.parametricType + "(?:\\s*\\|\\s*" + this.parametricType + ")*))?"
         );
 
-        let matches = regex.exec(line);
+        const matches = regex.exec(line);
         if (matches === null) {
             return null;
         }
@@ -94,18 +96,18 @@ class TypeScriptParser extends LanguageParser {
     }
 
     parseVar(line) {
-        let regex = new RegExp(
+        const regex = new RegExp(
             // Modifiers
             "((public|private|static|readonly|var|let|const)\\s+)*" +
             // Name
-            "(?<name>" + this.settings.varIdentifier + ")[?!]?\\s*" + 
+            "(?<name>" + this.settings.varIdentifier + ")[?!]?\\s*" +
             // Parametric type
-            "(:\\s*(?<type>" + this.parametricType + "))?" + 
+            "(:\\s*(?<type>" + this.parametricType + "))?" +
             // Value
             "(\\s*=\\s*(?<value>.*?))?([;,]|$)"
         );
 
-        let match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return null;
         }
@@ -213,18 +215,18 @@ class TypeScriptParser extends LanguageParser {
             ["yields", "{${0:type}} - ${1:description}"]
         ];
 
-        let regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+        const regex = new RegExp(
+            /^\*\s+@(?<tag>.*)/
         );
 
-        let match = regex.exec(line);
+        const match = regex.exec(line);
         if (!match) {
             return [];
         }
 
-        let matches = [];
-        let typed = match.groups.tag;
-        
+        const matches = [];
+        const typed = match.groups.tag;
+
         tags.forEach(tag => {
             if (tag[0].includes(typed)) {
                 matches.push(tag);

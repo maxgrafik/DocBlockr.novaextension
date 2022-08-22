@@ -38,9 +38,9 @@ class CommentExtender {
      */
     trackPosition(editor) {
 
-        let cursorPosition = editor.selectedRange.start;
+        const cursorPosition = editor.selectedRange.start;
 
-        let docBlock = this.docBlocks.find(range => {
+        const docBlock = this.docBlocks.find(range => {
             return cursorPosition > range.start && cursorPosition < range.end;
         });
 
@@ -50,19 +50,6 @@ class CommentExtender {
 
         } else {
             // check contents of docBlock
-
-            let lineRange = editor.getLineRangeForRange(editor.selectedRange);
-            let line = editor.getTextInRange(
-                new Range(lineRange.start, cursorPosition)
-            );
-
-            // set state to false if text before cursor is @...
-            // otherwise committing completion items won't work
-            if (/@[a-zA-Z]*$/.test(line)) {
-                this.setContext({"return": false, "tab": true});
-                return;
-            }
-
             // we may have an invalid range here
             // so wrap in try ... catch block
             let text = "";
@@ -82,42 +69,76 @@ class CommentExtender {
 
         if (event === "return") {
 
-            let lineRange = editor.getLineRangeForRange(editor.selectedRange);
-            let lineText = editor.getTextInRange(lineRange).replace(/[\n\r]+$/, "");
+            const cursorPosition = editor.selectedRange.start;
 
-            let prevRange = new Range(lineRange.start, editor.selectedRange.start);
-            let prevText = editor.getTextInRange(prevRange);
+            const lineRange = editor.getLineRangeForRange(
+                new Range(cursorPosition, cursorPosition)
+            );
 
-            if (/^\s*\*(?:.?|.*(?:[^*][^/]|[^*]\/|\*[^/]))\s*$/.test(prevText)) {
-                lineText = lineText.replace(/^(\s*\*\s*).*$/, "$1");
-                editor.insert(editor.document.eol + lineText);
-            } else if (/^\s*\/\*\*.?$/.test(prevText)) {
-                lineText = lineText.replace(/^(\s*)\/\*(\*\s?).*$/, "$1 $2 ");
-                editor.insert(editor.document.eol + lineText);
-            } else {
+            const preText = editor.getTextInRange(
+                new Range(lineRange.start, cursorPosition)
+            );
+
+            // cursor is inside docblock range but before asterisk
+            // - just insert a linebreak
+            if (preText.trim() === "") {
                 editor.insert(editor.document.eol);
+                return;
             }
+
+            const lineText = editor.getTextInRange(lineRange).replace(/[\n\r]+$/, "");
+
+            let indent = "";
+
+            if (/^\s*\/\*[*!]]/.test(lineText)) {
+                // cursor on docblock start line (/**)
+                indent = lineText.replace(/^(\s*).*$/m, "$1 * ");
+            } else if (/^\s*\*(?!\/)/.test(lineText)) {
+                // cursor on line starting with asterisk
+                indent = lineText.replace(/^(\s*)\*(\s*).*$/m, "$1*$2");
+            } else {
+                // any other line
+                indent = lineText.replace(/^(\s*).*$/m, "$1");
+            }
+
+            editor.insert(editor.document.eol + indent);
         }
 
         else if (event === "tab") {
 
+            const cursorPosition = editor.selectedRange.start;
+
+            const lineRange = editor.getLineRangeForRange(
+                new Range(cursorPosition, cursorPosition)
+            );
+
+            const preText = editor.getTextInRange(
+                new Range(lineRange.start, cursorPosition)
+            );
+
+            // cursor is inside docblock range but before asterisk
+            // - just insert tabText
+            if (preText.trim() === "") {
+                editor.insert(editor.tabText);
+                return;
+            }
+
             const regex = [
-                new RegExp(/^\s*\*(\s*@(?:param|property)\s+\S+\s+\S+\s+)\S/),
-                new RegExp(/^\s*\*(\s*@(?:returns?|define)\s+\S+\s+\S+\s+)\S/),
-                new RegExp(/^\s*\*(\s*@[a-z]+\s+)\S/),
-                new RegExp(/^\s*\*(\s*)/)
+                new RegExp(/^\s*\*\s*([@\\](?:param|property)\s+\S+\s+\S+\s+(?:-\s)?)\S/),
+                new RegExp(/^\s*\*\s*([@\\](?:returns?|retval|result|yields?|throws?|exception)\s+\S+\s+(?:-\s)?)\S/),
+                new RegExp(/^\s*\*\s*([@\\][a-z]+\s+)\S/),
+                new RegExp(/^\s*\*\s*/)
             ];
 
-            let lineRange = editor.getLineRangeForRange(editor.selectedRange);
-            let prevRange = editor.getLineRangeForRange(
+            const prevRange = editor.getLineRangeForRange(
                 new Range(lineRange.start-1, lineRange.start-1)
             );
-            let lineText = editor.getTextInRange(prevRange);
+            const prevText = editor.getTextInRange(prevRange);
 
             let indent = editor.tabText;
             for (const rx of regex) {
-                let match = rx.exec(lineText);
-                if (match) {
+                const match = rx.exec(prevText);
+                if (match && match[1]) {
                     indent = "".padEnd(match[1].length);
                     break;
                 }
@@ -136,8 +157,8 @@ class CommentExtender {
      */
     setContext(events) {
         Object.keys(events).forEach(key => {
-            let eventName = "maxgrafik.DocBlockr.evt.key" + key.charAt(0).toUpperCase() + key.slice(1);
-            let current = nova.workspace.context.get(eventName);
+            const eventName = "maxgrafik.DocBlockr.evt.key" + key.charAt(0).toUpperCase() + key.slice(1);
+            const current = nova.workspace.context.get(eventName);
             if (current !== events[key]) {
                 nova.workspace.context.set(eventName, events[key]);
             }
@@ -145,22 +166,23 @@ class CommentExtender {
     }
 
     /**
-     * Get ranges of all (complete!) docBlocks in document
+     * Get ranges of all docBlocks in document (including incomplete blocks)
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            "^[\\t ]*\\/\\*\\*(?:(?!\\/(?:\\/|\\*|\\*\\*)).)+?\\*\\/[\\t ]*$"
-        , "gms");
+            /^[\t ]*\/\*[*!](?:.)+?\*\/[\t ]*$/,
+            "gms"
+        );
 
-        let range = new Range(0, editor.document.length);
-        let text = editor.getTextInRange(range);
+        const range = new Range(0, editor.document.length);
+        const text = editor.getTextInRange(range);
 
         const matches = text.matchAll(regex);
         if (!matches) {
             return null;
         }
 
-        let ranges = [];
+        const ranges = [];
         for (const match of matches) {
             ranges.push(
                 new Range(match.index, match.index+match[0].length)
