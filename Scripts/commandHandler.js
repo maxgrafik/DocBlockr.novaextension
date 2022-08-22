@@ -1,8 +1,9 @@
-const LanguageParser = require("languages/parser.js");
-const JavaScriptParser = require("languages/javascript.js");
-const TypeScriptParser = require("languages/typescript.js");
-const PHPParser = require("languages/php.js");
 const CPPParser = require("languages/cpp.js");
+const JavaParser = require("languages/java.js");
+const JavaScriptParser = require("languages/javascript.js");
+const ObjCParser = require("languages/objc.js");
+const PHPParser = require("languages/php.js");
+const TypeScriptParser = require("languages/typescript.js");
 const CompletionProvider = require("completionProvider.js");
 
 /**
@@ -86,9 +87,8 @@ class CommandHandler {
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            // added negative lookahead (?!/**)
-            // to not match unfinished docblocks
-            "^[\\t ]*\\/\\*\\*(?:(?!\\/\\*\\*).)+?\\*\\/[\\t ]*$",
+            // added negative lookahead (?!/**) to not match unfinished docblocks
+            /^[\t ]*\/\*[*!](?:(?!\/\*[*!]).)+?\*\/[\t ]*$/,
             "gms"
         );
 
@@ -121,24 +121,33 @@ class CommandHandler {
 
         let parser;
         switch (editor.document.syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+            parser = new CPPParser(this.config);
+            break;
+        case "java":
+            parser = new JavaParser();
+            break;
         case "javascript":
         case "jsx":
             parser = new JavaScriptParser();
             break;
-        case "typescript":
-        case "tsx":
-            parser = new TypeScriptParser();
+        case "objc":
+            parser = new ObjCParser(this.config);
             break;
         case "php":
             parser = new PHPParser();
             break;
-        case "cpp":
-        case "c":
-        case "lsl":
-            parser = new CPPParser();
+        case "rust":
+            // There's no point in reparsing a Rust comment
+            return;
+        case "typescript":
+        case "tsx":
+            parser = new TypeScriptParser();
             break;
         default:
-            parser = new LanguageParser({language: editor.document.syntax});
+            return;
         }
 
         // do everything in one edit so we can undo in one step
@@ -150,12 +159,9 @@ class CommandHandler {
 
                 docBlock = parser.parseDocBlock(docBlock);
                 if (docBlock.length > 0) {
-                    let snippet = parser.formatDocBlock(docBlock, this.config);
-                    let wrapWidth = WrapGuideColumn-indent.length;
-
-                    snippet = indent + parser
-                        .wrapLines(snippet, wrapWidth)
-                        .join(editor.document.eol + indent);
+                    const wrapWidth = WrapGuideColumn-indent.length;
+                    let snippet = parser.formatDocBlock(docBlock, this.config, false, wrapWidth);
+                    snippet = indent + snippet.join(editor.document.eol + indent);
 
                     edit.replace(range, ""); // ged rid of selection
                     edit.insert(range.start, snippet); // plain text is default

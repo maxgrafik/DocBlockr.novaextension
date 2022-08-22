@@ -24,12 +24,13 @@ class TypeScriptParser extends LanguageParser {
             varIdentifier: validChars,
             fnIdentifier: validChars,
             clsIdentifier: validChars,
-            typeInfo: "{%s}", // shouldn’t this be null?
+            typeInfo: "{%s}", // if TypeScript were really that strongly typed, this should be null :P
             tags: {
                 keySummary: "summary",
                 keyVar: "@type",
                 keyRet: "@returns"
-            }
+            },
+            commentStyle: "/**"
         };
         super(settings);
 
@@ -215,7 +216,7 @@ class TypeScriptParser extends LanguageParser {
         ];
 
         const regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+            /^\*\s+@(?<tag>.*)/
         );
 
         const match = regex.exec(line);

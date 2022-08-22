@@ -11,6 +11,12 @@ class LanguageParser {
         this.settings = settings;
     }
 
+    /**
+     * Try to get as much text as suitable to parse a class/function/var
+     *
+     * @param {Array} lines - The text from editor as array of lines
+     */
+
     getDefinition(lines) {
         let definition = "";
         let lineCounter = 0;
@@ -34,7 +40,7 @@ class LanguageParser {
             }
 
             if (line !== "") {
-                definition += line;
+                definition += line.trim() + " ";
                 if (line.endsWith(";")) {
                     return definition;
                 }
@@ -52,49 +58,46 @@ class LanguageParser {
         return definition;
     }
 
+    /**
+     * Parse the definition from above and see what matches
+     *
+     * @param {string} definition
+     */
+
     parseDefinition(definition) {
         let result;
 
-        result = this.parseClass(definition);  // (name, extends)
+        result = this.parseClass(definition);  // (className, superClass)
         if (result) {
-            return this.formatClass(...result);
+            return this.createClassBlock(...result);
         }
 
-        result = this.parseFunction(definition);  // (name, type, args, returnType)
+        result = this.parseFunction(definition);  // (fnName, fnType, fnArgs, retType [, throwArgs])
         if (result) {
-            return this.formatFunction(...result);
+            return this.createFunctionBlock(...result);
         }
 
-        result = this.parseVar(definition);  // (name, type, value)
+        result = this.parseVar(definition);  // (varName, varType, varValue)
         if (result) {
-            return this.formatVar(...result);
+            return this.createVarBlock(...result);
         }
 
         return null;
     }
 
+    /**
+     * Re-parse a DocBlock and try to guess the fields
+     * @see commandHandler.js
+     *
+     * @param {string} docBlock
+     */
+
     parseDocBlock(docBlock) {
         const out = [];
 
-        // The fields which we format/align
-        // The boolean indicates whether to skip the arg column
-        const keywords = {
-            "param": false,
-            "property": false,
-            "returns": true,
-            "return": true,
-            "retval": true,
-            "result": true,
-            "throws": true,
-            "throw": true,
-            "exception": true,
-            "yields": true,
-            "yield": true
-        };
-
         // de-indent and strip all comment markers
         docBlock = docBlock
-            .replace(/^[\t ]*\/\*\*[\t ]*$/m, "")
+            .replace(/^[\t ]*\/\*[*!][\t ]*$/m, "")
             .replace(/^[\t ]*\*\/[\t ]*/m, "")
             .replace(/^[\t ]*\*[\t ]*/gm, "")
             .trim();
@@ -103,9 +106,9 @@ class LanguageParser {
             return null;
         }
 
+        // find either a text line, a tag line or an empty line
         let regex = new RegExp(
-            // find either a text line, a tag line or an empty line
-            "(?<text>^[^@\\n\\r].+?$)|(?<tag>^@.+?$)|(?<empty>^$)",
+            /(?<text>^[^@\\\n\r].+?$)|(?<tag>^[@\\].+?$)|(?<empty>^$)/,
             "gm"
         );
 
@@ -114,7 +117,7 @@ class LanguageParser {
             return null;
         }
 
-        // add continuations to preceding line
+        // un-wrap lines
         const lines = [];
         for (const match of matches) {
             const text = match.groups.text || false;
@@ -123,10 +126,10 @@ class LanguageParser {
             const lastIdx = lines.length-1;
             if (lastIdx < 0 || lines[lastIdx] === "") {
                 lines.push(text || tag || "");
-            } else if (lastIdx === 0 && lines[lastIdx].endsWith(".")) {
-                lines.push(text || tag || ""); // period ends summary (see specs)
-            } else if (!tag && !text) {
-                lines.push(""); // keep empty lines
+            } else if (lastIdx === 0 && lines[lastIdx].endsWith(".")) {  // period ends summary (see specs)
+                lines.push(text || tag || "");
+            } else if (!tag && !text) {  // keep empty lines
+                lines.push("");
             } else if (tag) {
                 lines.push(tag);
             } else if (text) {
@@ -134,9 +137,20 @@ class LanguageParser {
             }
         }
 
+        // The tags which we format/align
+        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception)$/;
+
+        // The tags which have no arg column
+        let skipArgs = /^[@\\](returns?|retval|result|yields?|throws?|exception)$/;
+
+        // Except for Java which has a throws arg
+        if (this.settings.language === "java") {
+            skipArgs = /^[@\\](returns?)$/;
+        }
+
+        // split into @tag and remainder
         regex = new RegExp(
-            "^(?<tag>@[^\\s]+)?" +
-            "(?:\\s*(?<remainder>.+))?$"
+            /^(?<tag>[@\\][^\s]+)?(?:\s*(?<remainder>.+))?$/
         );
 
         lines.forEach(line => {
@@ -148,17 +162,18 @@ class LanguageParser {
                     .replace(/\s{2,}/g, " ");
 
                 if (!tag) {
-                    out.push([remainder]);
+                    out.push([remainder]); // just a text/empty line
 
-                } else if (!Object.keys(keywords).includes(tag.slice(1))) {
+                } else if (!keywords.test(tag)) { // a tag we don't align
                     out.push([tag, remainder]);
 
                 } else {
                     const splits = remainder.split(" ");
-                    const skipArg = keywords[tag.slice(1)];
+                    const skipArg = skipArgs.test(tag);
+
                     let type, arg , desc;
 
-                    if (this.settings.typeInfo === null) {
+                    if (this.settings.typeInfo === null) { // skip type column
                         type = null;
                         arg = skipArg ? "" : splits[0];
                         desc = splits.slice(skipArg ? 0 : 1).join(" ");
@@ -177,7 +192,7 @@ class LanguageParser {
 
                     out.push([
                         tag,
-                        type || null,
+                        type || "",
                         arg || "",
                         desc || ""
                     ]);
@@ -188,23 +203,39 @@ class LanguageParser {
         return out;
     }
 
-    formatDocBlock(docBlock, config) {
+    /**
+     * Format DocBlock
+     * @param {Array}   docBlock         - An array of docblock lines with an arry of fields each
+     * @param {Object}  config           - The extension configuration
+     * @param {boolean} withPlaceholders - Whether to create placeholders
+     * @param {integer} wrapWidth        - Wrap width
+     */
+
+    formatDocBlock(docBlock, config, withPlaceholders, wrapWidth) {
         const out = [];
         const alignTags = config.alignTags;
         const maxLength = [];
 
+        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception|var|type)$/;
+
         /**
          * Calculate max width of each column
-         * Strip Nova placeholders and leading backslash escapes
+         * - col 1: only entries with more than 1 field => [@tag, text, ...]
+         * - col 2+: only for tags we align (see keywords)
          */
+
         if (alignTags > 0) {
             docBlock.forEach(entry => {
-                entry.forEach((e, idx) => {
-                    if (idx > maxLength.length-1) {
-                        maxLength.push(0);
-                    }
-                    if (e !== null) {
-                        e = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
+                // only entries with more than 1 field
+                (entry.length > 1) && entry.forEach((e, idx) => {
+                    if (
+                        e !== null &&             // field is not null AND
+                        (idx === 0 ||             // it's either the first column OR
+                        keywords.test(entry[0]) ) // first column is in keywords
+                    ) {
+                        if (idx > maxLength.length-1) { // expand array as needed
+                            maxLength.push(0);
+                        }
                         maxLength[idx] = Math.max(maxLength[idx], e.length);
                     }
                 });
@@ -215,40 +246,127 @@ class LanguageParser {
         let descSep = " ";
 
         switch(this.settings.language) {
+        case "cpp": // This is the language specified by the parser, not the editor’s syntax!
+            addEmptyLine = config.addEmptyLineCPP;
+            break;
+        case "java":
+            addEmptyLine = config.addEmptyLineJava;
+            break;
         case "javascript":
         case "jsx":
             addEmptyLine = config.addEmptyLineJS;
             descSep = " - ";
+            break;
+        case "objc":
+            addEmptyLine = config.addEmptyLineObjC;
+            break;
+        case "php":
+            addEmptyLine = config.addEmptyLinePHP;
+            break;
+        case "rust":
+            // RustParser overrides formatDocBlock!!!
             break;
         case "typescript":
         case "tsx":
             addEmptyLine = config.addEmptyLineTS;
             descSep = " - ";
             break;
-        case "php":
-            addEmptyLine = config.addEmptyLinePHP;
-            break;
-        case "cpp": // C and LSL use the same parser
-            addEmptyLine = config.addEmptyLineCPP;
-            break;
         }
 
-        out.push("/**");
+        let tabStop = 0;
+
+        out.push(this.settings.commentStyle);
+
         docBlock.forEach((entry, index) => {
 
             let line = " *";
+            let wrapStart = 0;
+
             entry.forEach((e, idx) => {
-                if (e !== null) {
-                    line += (idx === maxLength.length-1 ? descSep : " ") + e;
+
+                // whether to skip the 'type' column
+                const skipCol = keywords.test(entry[0])
+                    && (this.settings.typeInfo === null)
+                    && (idx === 1);
+
+                if (e !== null && !skipCol) {
+
+                    let padding = 0;
+
                     if (alignTags > idx) {
-                        const text = e.replace(/^(\{?)(?:\$\{\d+:)?([^}]+)(?:\})?(\}?)$/, "$1"+"$2"+"$3").replace(/^[\\]/, "");
-                        const padding = maxLength[idx] - text.length;
-                        line += "".padEnd(padding);
+                        padding = maxLength[idx] - e.length;
                     }
+
+                    line += (idx === 3) ? descSep : " ";
+
+                    // leading dollar signs need to be escaped
+                    // if it's not a placeholder, e.g. PHP vars
+                    if (/^\$[^{]/.test(e)) {
+                        e = "\\" + e;
+                    }
+
+                    if (withPlaceholders) {
+                        switch(e) {
+                        case this.settings.tags.keySummary:
+                            e = this.formatPlaceholder(e, tabStop);
+                            tabStop++;
+                            break;
+                        case "description":
+                            e = this.formatPlaceholder(e, tabStop);
+                            tabStop++;
+                            break;
+                        case this.formatType("type"):
+                            e = this.formatPlaceholder("type", tabStop);
+                            e = this.formatType(e);
+                            tabStop++;
+                            break;
+                        }
+                    }
+
+                    // the last column is most likely the description
+                    // store the starting point for wrapping lines
+                    if (idx > 0 && idx === entry.length-1) {
+                        wrapStart = line.length;
+                    }
+
+                    /**
+                     * For C languages replace @-sign with backslash \
+                     * if comments are configured to be Qt style
+                     */
+                    if (
+                        e.charAt(0) === "@" &&
+                        (this.settings.language === "cpp" ||
+                        this.settings.language === "objc") &&
+                        this.settings.commentStyle === "/*!"
+                    ) {
+                        e = e.replace(/^@/, "\\");
+                    }
+
+
+                    line += e + "".padEnd(padding);
                 }
             });
-            out.push(line.replace(/\s+$/, ""));
 
+            line = line.replace(/\s+$/, "");
+
+            // wrap lines
+            if (wrapWidth && wrapWidth > 0) {
+                let tmp = "";
+                const words = line.split(" ");
+                words.forEach(word => {
+                    if (tmp.length + word.length <= wrapWidth) {
+                        tmp += word + " ";
+                    } else {
+                        out.push(tmp.replace(/\s+$/, ""));
+                        tmp = " * ".padEnd(wrapStart) + word + " ";
+                    }
+                });
+                out.push(tmp.replace(/\s+$/, ""));
+            } else {
+                out.push(line);
+            }
+
+            // add empty lines as configured
             if (addEmptyLine > 0 && index === 0 && docBlock.length > 1) {
                 out.push(" *");
 
@@ -260,190 +378,165 @@ class LanguageParser {
             }
 
         });
+
         out.push(" */");
 
         return out;
     }
 
-    wrapLines(lines, wrapWidth) {
+    /**
+     * Creates a class block
+     */
+
+    createClassBlock(className, superClass) {
         const out = [];
-
-        for (const line of lines) {
-
-            if (line === "/**" || line === " */") {
-                out.push(line);
-                continue;
-            }
-
-            let tagPart;
-            let txtPart;
-
-            const regex = this.settings.typeInfo === null
-                ? /^(\s\*\s+@(?:[^ ]+\s+){2}(?:-\s)?)(.+)$/
-                : /^(\s\*\s+@(?:[^ ]+\s+){3}(?:-\s)?)(.+)$/;
-
-            const match = line.match(regex);
-            if (match) {
-                tagPart = match[1];
-                txtPart = match[2];
-            } else {
-                tagPart = " * ";
-                txtPart = line.slice(3);
-            }
-
-            let tmp = tagPart;
-            let words = txtPart.split(" ");
-            words.forEach(word => {
-                if (tmp.length + word.length <= wrapWidth) {
-                    tmp += word + " ";
-                } else {
-                    out.push(tmp.replace(/\s+$/, ""));
-                    tmp = " * ".padEnd(tagPart.length) + word + " ";
-                }
-            });
-            out.push(tmp.replace(/\s+$/, ""));
-        }
-        return out;
-    }
-
-    formatClass(name, superClass) {
-        const out = [];
-        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
+        out.push([this.settings.tags.keySummary]);
 
         if (superClass) {
-            out.push(["@extends " + superClass]);
+            if (typeof superClass === "string") {
+                out.push(["@extends", superClass]);
+            } else if (Array.isArray(superClass)) {
+                superClass.forEach(cls => {
+                    out.push(["@extends", cls]);
+                });
+            }
         }
         return out;
     }
 
-    formatFunction(name, type, args, returnType) {
+    /**
+     * Creates a function block
+     */
 
-        if (this.isStatement(name)) {
+    createFunctionBlock(fnName, fnType, fnArgs, retType, throwArgs) {
+
+        if (this.isStatement(fnName)) {
             return null;
         }
 
         const out = [];
-        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
-
-        let tabOffset = 0;
+        out.push([this.settings.tags.keySummary]);
 
         // if there are arguments, add a @param for each
-        if (args) {
+        if (fnArgs) {
 
             // remove comments inside the argument list.
-            args = args.replace(/\/\*.*?\*\//, "");
+            let args = fnArgs.replace(/\/\*.*?\*\//, "");
 
-            const parsedArgs = this.parseArgs(args);
+            args = this.parseArgs(args);
 
-            parsedArgs.forEach(arg => {
-                let name = (arg[0].charAt(0) === "$" ? "\\" : "") + arg[0];
-                let type = arg[1];
-                let value = arg[2];
+            args.forEach(arg => {
 
-                if (this.settings.typeInfo === null) {
+                const name = arg[0];
+                const type = arg[1] ||
+                    this.guessTypeFromValue(arg[2]) ||
+                    this.guessTypeFromName(arg[0]) ||
+                    "type";
 
-                    out.push([
-                        "@param",
-                        null,
-                        name,
-                        "${" + (tabOffset+1) + ":description}"
-                    ]);
-                    tabOffset += 1;
-
-                } else {
-
-                    if (!type && value) {
-                        type = this.guessTypeFromValue(value);
-                    }
-
-                    out.push([
-                        "@param",
-                        this.formatType((type || "type"), tabOffset+1),
-                        name,
-                        "${" + (tabOffset+2) + ":description}"
-                    ]);
-                    tabOffset += 2;
-                }
+                out.push([
+                    "@param",
+                    this.formatType(type),
+                    name,
+                    "description"
+                ]);
             });
         }
 
-        if (!returnType && type !== "constructor") {
-            returnType = this.guessTypeFromName(name);
+        if (!retType && fnType !== "constructor") {
+            retType = this.guessTypeFromName(fnName);
         }
 
-        tabOffset++;
-        if (this.settings.typeInfo === null) {
-            if (returnType && returnType !== "void") { // omit void return
-                out.push([
-                    this.settings.tags.keyRet,
-                    null,
-                    "",
-                    "${" + (tabOffset+1) + ":description}"
-                ]);
-            }
-        } else if (type === "getter") {
+        if (fnType === "getter") {
             out.push([
                 this.settings.tags.keyVar,
-                this.formatType("type", tabOffset),
+                this.formatType("type"),
                 "",
-                "${" + (tabOffset+1) + ":description}"
+                "description"
             ]);
-        } else if (type === "generator") {
+        } else if (fnType === "generator") {
             out.push([
                 "@yields",
-                this.formatType("type", tabOffset),
+                this.formatType("type"),
                 "",
-                "${" + (tabOffset+1) + ":description}"
+                "description"
             ]);
-        } else if (returnType) {
-            out.push([
-                this.settings.tags.keyRet,
-                this.formatType(returnType, tabOffset),
-                "",
-                "${" + (tabOffset+1) + ":description}"
-            ]);
+        } else if (retType) {
+            if (this.settings.typeInfo === null && retType === "void") {
+                // skip void return for languages without type info
+            } else {
+                out.push([
+                    this.settings.tags.keyRet,
+                    this.formatType(retType),
+                    "",
+                    "description"
+                ]);
+            }
+        }
+
+        if (throwArgs) {
+            throwArgs.forEach(arg => {
+                out.push([
+                    "@throws",
+                    this.formatType("type"),
+                    arg,
+                    "description"
+                ]);
+            });
         }
 
         return out;
     }
 
-    formatVar(name, type, value) {
-        const out = [];
+    /**
+     * Creates a var block
+     */
 
-        if (this.isStatement(name)) {
+    createVarBlock(varName, varType, varValue) {
+
+        if (this.isStatement(varName)) {
             return null;
         }
 
-        out.push(["${0:" + this.settings.tags.keySummary + "}"]);
+        const out = [];
 
-        if (this.settings.typeInfo === null) {
-            out.push([
-                this.settings.tags.keyVar + " " +
-                name
-            ]);
-        } else {
+        out.push([this.settings.tags.keySummary]);
 
-            if (!type) {
-                type = this.guessTypeFromValue(value) || this.guessTypeFromName(name) || "type";
-            }
+        varType = varType ||
+            this.guessTypeFromValue(varValue) ||
+            this.guessTypeFromName(varName) ||
+            "type";
 
-            out.push([
-                this.settings.tags.keyVar + " " +
-                this.formatType(type, 1)
-            ]);
-        }
+        out.push([
+            this.settings.tags.keyVar,
+            this.formatType(varType),
+            null //varName
+        ]);
 
         return out;
     }
 
-    formatType(type, tabStop) {
-        if (this.settings.typeInfo !== null) {
-            type = type ? type.replaceAll("\\", "\\\\") : type;
-            type = "${" + tabStop + ":" + type + "}";
-            return this.settings.typeInfo.replace("%s", type);
+    /**
+     * Format 'type' field according to parser settings
+     */
+
+    formatType(type) {
+        if (this.settings.typeInfo === null) {
+            return type;
         }
-        return null;
+        return this.settings.typeInfo.replace("%s", type);
     }
+
+    /**
+     * Format text as Nova placeholder
+     */
+
+    formatPlaceholder(text, tabStop) {
+        return "${" + tabStop + ":" + text + "}";
+    }
+
+    /**
+     * Parse argument string and return array of args
+     */
 
     parseArgs(raw) {
         const out = [];
@@ -522,7 +615,14 @@ class LanguageParser {
         return out;
     }
 
+    /**
+     * Guess argument/function return type from name
+     */
+
     guessTypeFromName(name) {
+        if (!name) {
+            return null;
+        }
         if (name.search("[$_]?(?:is|has)[A-Z_]") > -1) {
             return "boolean";
         }
@@ -531,6 +631,10 @@ class LanguageParser {
         }
         return null;
     }
+
+    /**
+     * Guess argument type from its value
+     */
 
     guessTypeFromValue(value) {
         if (!value) {
@@ -556,7 +660,7 @@ class LanguageParser {
         if ((value.toLowerCase() === "true") || (value.toLowerCase() === "false")) {
             return "boolean";
         }
-        let regex = new RegExp("^RegExp|^\\/[^/*].*\\/$");
+        let regex = new RegExp(/^RegExp|^\/.*\/([a-z]*)?$/);
         if (regex.test(value)) {
             return "RegExp";
         }
@@ -569,9 +673,10 @@ class LanguageParser {
     }
 
     /**
-     * false positives
-     * statements which look like functions to docblockr
+     * False Positives
+     * statements which look like functions to DocBlockr
      */
+
     isStatement(name) {
         const statements = [
             "for",

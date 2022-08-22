@@ -90,7 +90,7 @@ class CommentExtender {
 
             let indent = "";
 
-            if (/^\s*\/\*\*/.test(lineText)) {
+            if (/^\s*\/\*[*!]]/.test(lineText)) {
                 // cursor on docblock start line (/**)
                 indent = lineText.replace(/^(\s*).*$/m, "$1 * ");
             } else if (/^\s*\*(?!\/)/.test(lineText)) {
@@ -124,9 +124,9 @@ class CommentExtender {
             }
 
             const regex = [
-                new RegExp(/^\s*\*\s*(@(?:param|property)\s+\S+\s+\S+\s+(?:-\s)?)\S/),
-                new RegExp(/^\s*\*\s*(@(?:returns?|throws|yields)\s+\S+\s+(?:-\s)?)\S/),
-                new RegExp(/^\s*\*\s*(@[a-z]+\s+)\S/),
+                new RegExp(/^\s*\*\s*([@\\](?:param|property)\s+\S+\s+\S+\s+(?:-\s)?)\S/),
+                new RegExp(/^\s*\*\s*([@\\](?:returns?|retval|result|yields?|throws?|exception)\s+\S+\s+(?:-\s)?)\S/),
+                new RegExp(/^\s*\*\s*([@\\][a-z]+\s+)\S/),
                 new RegExp(/^\s*\*\s*/)
             ];
 
@@ -170,7 +170,7 @@ class CommentExtender {
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            "^[\\t ]*\\/\\*\\*(?:.)+?\\*\\/[\\t ]*$",
+            /^[\t ]*\/\*[*!](?:.)+?\*\/[\t ]*$/,
             "gms"
         );
 

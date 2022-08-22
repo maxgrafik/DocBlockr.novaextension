@@ -1,7 +1,10 @@
-const JavaScriptParser = require("languages/javascript.js");
-const TypeScriptParser = require("languages/typescript.js");
-const PHPParser = require("languages/php.js");
 const CPPParser = require("languages/cpp.js");
+const JavaParser = require("languages/java.js");
+const JavaScriptParser = require("languages/javascript.js");
+const ObjCParser = require("languages/objc.js");
+const PHPParser = require("languages/php.js");
+const RustParser = require("languages/rust.js");
+const TypeScriptParser = require("languages/typescript.js");
 
 /**
  * Completion Provider
@@ -23,26 +26,52 @@ class CompletionProvider {
             return [];
         }
 
-        const syntax = editor.document.syntax;
+        /**
+         * Switched to 'switch' statement
+         * as suggested by gwyneth (20220817)
+         */
+
+        let isEnabled = false;
+
+        switch(editor.document.syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+            isEnabled = this.config.enableCPP;
+            break;
+        case "java":
+            isEnabled = this.config.enableJava;
+            break;
+        case "javascript":
+        case "jsx":
+            isEnabled = this.config.enableJS;
+            break;
+        case "objc":
+            isEnabled = this.config.enableObjC;
+            break;
+        case "php":
+            isEnabled = this.config.enablePHP;
+            break;
+        case "rust":
+            isEnabled = this.config.enableRust;
+            break;
+        case "typescript":
+        case "tsx":
+            isEnabled = this.config.enableTS;
+            break;
+        default:
+            isEnabled = false;
+        }
 
         // skip if not enabled for language
-        if ((syntax === "javascript" || syntax === "jsx") && !this.config.enableJS) {
-            return [];
-        }
-        if ((syntax === "typescript" || syntax === "tsx") && !this.config.enableTS) {
-            return [];
-        }
-        if (syntax === "php" && !this.config.enablePHP) {
-            return [];
-        }
-        if (["cpp", "c", "lsl"].includes(syntax) && !this.config.enableCPP) {
+        if (!isEnabled) {
             return [];
         }
 
         const line = context.line.trim();
 
         // skip if not trigger chars
-        if (!line.endsWith("/**") && !line.match(/^\*\s+@/)) {
+        if (!line.endsWith("/**") && !line.match(/^\*\s+[@\\]/)) {
             return [];
         }
 
@@ -65,22 +94,31 @@ class CompletionProvider {
 
         let parser;
 
-        switch (syntax) {
+        switch (editor.document.syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+            parser = new CPPParser(this.config);
+            break;
+        case "java":
+            parser = new JavaParser();
+            break;
         case "javascript":
         case "jsx":
             parser = new JavaScriptParser();
             break;
-        case "typescript":
-        case "tsx":
-            parser = new TypeScriptParser();
+        case "objc":
+            parser = new ObjCParser(this.config);
             break;
         case "php":
             parser = new PHPParser();
             break;
-        case "cpp":
-        case "c":
-        case "lsl":
-            parser = new CPPParser();
+        case "rust":
+            parser = new RustParser();
+            break;
+        case "typescript":
+        case "tsx":
+            parser = new TypeScriptParser();
             break;
         default:
             return [];
@@ -95,8 +133,8 @@ class CompletionProvider {
         nova.workspace.context.set("maxgrafik.DocBlockr.evt.keyTab", false);
 
 
-        // provide tag completion if "@"
-        if (line.match(/^\*\s+@/)) {
+        // provide tag completion if "@" (or "\" as for C/C++)
+        if (line.match(/^\*\s+[@\\]/)) {
             this.cursorPosition = null;
             return this.provideTags(
                 parser.getDocTags(line)
@@ -147,7 +185,7 @@ class CompletionProvider {
                     completionItems.push(this.provideBlockComment());
                 } else {
                     // we finally have a docBlock, yay!
-                    const snippet = parser.formatDocBlock(docBlock, this.config);
+                    const snippet = parser.formatDocBlock(docBlock, this.config, true);
                     completionItems.push(
                         this.createCompletionItem(
                             "/** DocBlock */",
@@ -271,8 +309,7 @@ class CompletionProvider {
     provideHeaderBlock(parser) {
         const docBlock = [];
         const regex = new RegExp(
-            "^(?<tag>@[^\\s]+)?" +
-            "(?:\\s*(?<remainder>.+))?$"
+            /^(?<tag>[@\\][^\s]+)?(?:\s*(?<remainder>.+))?$/
         );
 
         docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
@@ -307,7 +344,12 @@ class CompletionProvider {
             });
         });
 
-        const snippet = parser.formatDocBlock(docBlock, this.config);
+        let snippet;
+        if (parser.settings.language === "rust") {
+            snippet = parser.formatHeaderBlock(docBlock);
+        } else {
+            snippet = parser.formatDocBlock(docBlock, this.config);
+        }
 
         return this.createCompletionItem(
             "/** Header */",

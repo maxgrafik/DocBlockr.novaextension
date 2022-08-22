@@ -7,7 +7,7 @@ const LanguageParser = require("parser.js");
 
 class CPPParser extends LanguageParser {
 
-    constructor() {
+    constructor(config) {
         /**
          * Language specific settings
          * @type Object
@@ -30,7 +30,8 @@ class CPPParser extends LanguageParser {
                 keySummary: "brief",
                 keyVar: "@var",
                 keyRet: "@return"
-            }
+            },
+            commentStyle: config.commentStyle === 1 ? "/*!" : "/**"
         };
         super(settings);
     }
@@ -72,19 +73,16 @@ class CPPParser extends LanguageParser {
         const className  = match.groups.className;
         const baseClause = match.groups.baseClause;
 
-        let classList = "";
+        const classList = [];
 
         if (baseClause) {
             regex = new RegExp(baseClass, "g");
-
-            const arr = [];
             while ((match = regex.exec(baseClause)) !== null) {
                 if (match.index === regex.lastIndex) {
                     regex.lastIndex++;
                 }
-                arr.push(match.groups.baseClass);
+                classList.push(match.groups.baseClass);
             }
-            classList = arr.join(", ");
         }
 
         return [className, classList];
@@ -221,7 +219,7 @@ class CPPParser extends LanguageParser {
         ];
 
         const regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+            /^\*\s+[@\\](?<tag>.*)/
         );
 
         const match = regex.exec(line);

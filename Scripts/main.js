@@ -5,15 +5,21 @@ const CommentExtender = require("commentExtender.js");
 const CommandHandler = require("commandHandler.js");
 
 const config = {
-    enableJS  : true,
-    enableTS  : false,
-    enablePHP : true,
-    enableCPP : true,
-    addEmptyLineJS  : 0,
-    addEmptyLineTS  : 0,
-    addEmptyLinePHP : 2,
-    addEmptyLineCPP : 1,
+    enableCPP  : true,
+    enableJava : true,
+    enableJS   : true,
+    enableObjC : true,
+    enablePHP  : true,
+    enableRust : true,
+    enableTS   : true,
+    addEmptyLineCPP  : 1,
+    addEmptyLineJava : 1,
+    addEmptyLineJS   : 0,
+    addEmptyLineObjC : 1,
+    addEmptyLinePHP  : 2,
+    addEmptyLineTS   : 0,
     alignTags : 0,
+    commentStyle : 0,
     extendComments : false,
     ESLintComments : false
 };
@@ -53,10 +59,10 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"],
+        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "typescript", "tsx"],
         new CompletionProvider(config),
         {
-            triggerChars: new Charset("*@")
+            triggerChars: new Charset("*@\\")
         }
     );
 
@@ -115,22 +121,46 @@ function registerCommentExtender() {
     events.add(
         nova.workspace.onDidAddTextEditor(editor => {
 
-            const syntax = editor.document.syntax;
+            let isEnabled = false;
+
+            /**
+             * Switched to 'switch' statement
+             * as suggested by gwyneth (20220817)
+             */
+
+            switch(editor.document.syntax) {
+            case "c":
+            case "cpp":
+            case "lsl":
+                isEnabled = config.enableCPP;
+                break;
+            case "java":
+                isEnabled = config.enableJava;
+                break;
+            case "javascript":
+            case "jsx":
+                isEnabled = config.enableJS;
+                break;
+            case "objc":
+                isEnabled = config.enableObjC;
+                break;
+            case "php":
+                isEnabled = config.enablePHP;
+                break;
+            case "rust":
+                // There's no point in extending Rust comments
+                isEnabled = false;
+                break;
+            case "typescript":
+            case "tsx":
+                isEnabled = config.enableTS;
+                break;
+            default:
+                isEnabled = false;
+            }
 
             // skip if not enabled for language
-            if (!["javascript", "typescript", "php", "jsx", "tsx", "cpp", "c", "lsl"].includes(syntax)) {
-                return;
-            }
-            if ((syntax === "javascript" || syntax === "jsx") && !config.enableJS) {
-                return;
-            }
-            if ((syntax === "typescript" || syntax === "tsx") && !config.enableTS) {
-                return;
-            }
-            if (syntax === "php" && !config.enablePHP) {
-                return;
-            }
-            if (["cpp", "c", "lsl"].includes(syntax) && !config.enableCPP) {
+            if (!isEnabled) {
                 return;
             }
 

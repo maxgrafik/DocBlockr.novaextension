@@ -29,7 +29,8 @@ class JavaScriptParser extends LanguageParser {
                 keySummary: "summary",
                 keyVar: "@type",
                 keyRet: "@returns"
-            }
+            },
+            commentStyle: "/**"
         };
         super(settings);
     }
@@ -278,7 +279,7 @@ class JavaScriptParser extends LanguageParser {
         ];
 
         const regex = new RegExp(
-            "^\\*\\s+@(?<tag>.*)"
+            /^\*\s+@(?<tag>.*)/
         );
 
         const match = regex.exec(line);
