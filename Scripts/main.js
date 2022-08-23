@@ -5,13 +5,14 @@ const CommentExtender = require("commentExtender.js");
 const CommandHandler = require("commandHandler.js");
 
 const config = {
-    enableCPP  : true,
-    enableJava : true,
-    enableJS   : true,
-    enableObjC : true,
-    enablePHP  : true,
-    enableRust : true,
-    enableTS   : true,
+    enableCPP   : true,
+    enableJava  : true,
+    enableJS    : true,
+    enableObjC  : true,
+    enablePHP   : true,
+    enableRust  : true,
+    enableSwift : true,
+    enableTS    : true,
     addEmptyLineCPP  : 1,
     addEmptyLineJava : 1,
     addEmptyLineJS   : 0,
@@ -59,10 +60,10 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "typescript", "tsx"],
+        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "swift", "typescript", "tsx"],
         new CompletionProvider(config),
         {
-            triggerChars: new Charset("*@\\")
+            triggerChars: new Charset("*@-\\")
         }
     );
 
@@ -148,8 +149,10 @@ function registerCommentExtender() {
                 isEnabled = config.enablePHP;
                 break;
             case "rust":
-                // There's no point in extending Rust comments
-                isEnabled = false;
+                isEnabled = config.enableRust;
+                break;
+            case "swift":
+                isEnabled = config.enableSwift;
                 break;
             case "typescript":
             case "tsx":

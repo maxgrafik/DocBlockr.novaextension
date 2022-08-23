@@ -4,6 +4,7 @@ const JavaScriptParser = require("languages/javascript.js");
 const ObjCParser = require("languages/objc.js");
 const PHPParser = require("languages/php.js");
 const RustParser = require("languages/rust.js");
+const SwiftParser = require("languages/swift.js");
 const TypeScriptParser = require("languages/typescript.js");
 
 /**
@@ -55,6 +56,9 @@ class CompletionProvider {
         case "rust":
             isEnabled = this.config.enableRust;
             break;
+        case "swift":
+            isEnabled = this.config.enableSwift;
+            break;
         case "typescript":
         case "tsx":
             isEnabled = this.config.enableTS;
@@ -71,7 +75,11 @@ class CompletionProvider {
         const line = context.line.trim();
 
         // skip if not trigger chars
-        if (!line.endsWith("/**") && !line.match(/^\*\s+[@\\]/)) {
+        if (
+            !line.endsWith("/**")
+            && !line.match(/^\*\s+[@\\]/)
+            && !line.match(/^\/{3}\s+-/)
+        ) {
             return [];
         }
 
@@ -116,6 +124,9 @@ class CompletionProvider {
         case "rust":
             parser = new RustParser();
             break;
+        case "swift":
+            parser = new SwiftParser();
+            break;
         case "typescript":
         case "tsx":
             parser = new TypeScriptParser();
@@ -134,10 +145,13 @@ class CompletionProvider {
 
 
         // provide tag completion if "@" (or "\" as for C/C++)
-        if (line.match(/^\*\s+[@\\]/)) {
+        if (
+            line.match(/^\*\s+[@\\]/) || line.match(/^\/{3}\s+-/)
+        ) {
             this.cursorPosition = null;
             return this.provideTags(
-                parser.getDocTags(line)
+                parser.getDocTags(line),
+                editor.document.syntax
             );
         }
 
@@ -287,13 +301,24 @@ class CompletionProvider {
      * Provide matching @tags
      * @returns {Array}
      */
-    provideTags(matches) {
+    provideTags(matches, syntax) {
         const items = [];
         matches.forEach(match => {
+
+            let snippet;
+            if (syntax === "swift") {
+                snippet = match[0]
+                    .replace(/\b\w/g, s => s.toUpperCase())
+                    .replace(/(.+)/, " $1: ");
+                snippet += match[1];
+            } else {
+                snippet = match[0] + (match[1] ? " " + match[1] : "");
+            }
+
             items.push(
                 this.createCompletionItem(
                     match[0],
-                    match[0] + (match[1] ? " " + match[1] : ""),
+                    snippet,
                     null
                 )
             );
@@ -345,7 +370,10 @@ class CompletionProvider {
         });
 
         let snippet;
-        if (parser.settings.language === "rust") {
+        if (
+            parser.settings.language === "rust" ||
+            parser.settings.language === "swift"
+        ) {
             snippet = parser.formatHeaderBlock(docBlock);
         } else {
             snippet = parser.formatDocBlock(docBlock, this.config);

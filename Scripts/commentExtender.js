@@ -56,12 +56,25 @@ class CommentExtender {
             try {
                 text = editor.getTextInRange(docBlock);
             } catch(e) {
-                this.setContext({"return": true, "tab": true});
+                this.setContext({"return": false, "tab": false});
             }
 
             // Nova uses \uFFFC (Object Replacement Character) for
-            // snippet placeholders, if so set tab event to false
-            this.setContext({"return": true, "tab": (/[\uFFFC]+/.test(text) ? false : true)});
+            // snippet placeholders, if there is one within the
+            // docblock set tab event to false
+
+            let tabState = (/[\uFFFC]+/.test(text) ? false : true);
+
+            // Also ignore tabs for Swift/Rust comments
+
+            if (
+                editor.document.syntax === "rust" ||
+                editor.document.syntax === "swift"
+            ) {
+                tabState = false;
+            }
+
+            this.setContext({"return": true, "tab": tabState});
         }
     }
 
@@ -90,14 +103,16 @@ class CommentExtender {
 
             let indent = "";
 
-            if (/^\s*\/\*[*!]]/.test(lineText)) {
-                // cursor on docblock start line (/**)
+            if (/^\s*\/\*[*!]]/.test(lineText)) {                   // cursor on docblock start line (/**)
                 indent = lineText.replace(/^(\s*).*$/m, "$1 * ");
-            } else if (/^\s*\*(?!\/)/.test(lineText)) {
-                // cursor on line starting with asterisk
+
+            } else if (/^\s*\*(?!\/)/.test(lineText)) {             // cursor on line starting with asterisk
                 indent = lineText.replace(/^(\s*)\*(\s*).*$/m, "$1*$2");
-            } else {
-                // any other line
+
+            } else if (/^\s*\/{3}/.test(lineText)) {                // cursor on line starting with '///'
+                indent = lineText.replace(/^(\s*)\/{3}(\s*).*$/m, "$1///$2");
+
+            } else {                                                // any other line
                 indent = lineText.replace(/^(\s*).*$/m, "$1");
             }
 
@@ -166,11 +181,12 @@ class CommentExtender {
     }
 
     /**
-     * Get ranges of all docBlocks in document (including incomplete blocks)
+     * Get ranges of all docBlocks in document
      */
     getDocBlockRanges(editor) {
         const regex = new RegExp(
-            /^[\t ]*\/\*[*!](?:.)+?\*\/[\t ]*$/,
+            // either a regular block (/** ... */) or a '///' comment line
+            /^(?:[\t ]*\/\*[*!].+?\*\/[\t ]*)$|^(?:[\t ]*\/{3}[^\n\r]*?[\n\r])/,
             "gms"
         );
 

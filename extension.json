@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -21,6 +21,7 @@
         "onLanguage:objc",
         "onLanguage:php",
         "onLanguage:rust",
+        "onLanguage:swift",
         "onLanguage:typescript",
         "onLanguage:tsx"
     ],
@@ -32,7 +33,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
-                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "typescript", "tsx"]
+                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "swift", "typescript", "tsx"]
                 }
             },
             {
@@ -51,7 +52,7 @@
                 "shortcut": "return",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
-                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "typescript", "tsx"]
+                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "swift", "typescript", "tsx"]
                 }
             },
             {
@@ -106,6 +107,12 @@
                 {
                     "key": "maxgrafik.DocBlockr.config.enableRust",
                     "title": "Rust",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.enableSwift",
+                    "title": "Swift",
                     "type": "boolean",
                     "default": true
                 },
@@ -275,6 +282,14 @@
                 {
                     "key": "maxgrafik.DocBlockr.workspace.enableRust",
                     "title": "Rust",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "radio": false,
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enableSwift",
+                    "title": "Swift",
                     "type": "enum",
                     "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
                     "radio": false,

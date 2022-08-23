@@ -1,3 +1,8 @@
+## Version 0.9.0
+
+* Added support for Swift *(experimental)*
+
+
 ## Version 0.8.0
 
 * Added support for Java, ObjC/ObjC++ and Rust. *There may be issues!*

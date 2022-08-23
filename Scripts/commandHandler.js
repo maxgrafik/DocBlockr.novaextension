@@ -142,6 +142,9 @@ class CommandHandler {
         case "rust":
             // There's no point in reparsing a Rust comment
             return;
+        case "swift":
+            // There's no point in reparsing a Swift comment
+            return;
         case "typescript":
         case "tsx":
             parser = new TypeScriptParser();
