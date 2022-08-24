@@ -78,7 +78,7 @@ class CompletionProvider {
         if (
             !line.endsWith("/**")
             && !line.match(/^\*\s+[@\\]/)
-            && !line.match(/^\/{3}\s+-/)
+            && !line.match(/^\/{3}[ ]-/)
         ) {
             return [];
         }
@@ -146,7 +146,7 @@ class CompletionProvider {
 
         // provide tag completion if "@" (or "\" as for C/C++)
         if (
-            line.match(/^\*\s+[@\\]/) || line.match(/^\/{3}\s+-/)
+            line.match(/^\*\s+[@\\]/) || line.match(/^\/{3}[ ]-/)
         ) {
             this.cursorPosition = null;
             return this.provideTags(
@@ -307,10 +307,7 @@ class CompletionProvider {
 
             let snippet;
             if (syntax === "swift") {
-                snippet = match[0]
-                    .replace(/\b\w/g, s => s.toUpperCase())
-                    .replace(/(.+)/, " $1: ");
-                snippet += match[1];
+                snippet = " " + match[0] + match[1];
             } else {
                 snippet = match[0] + (match[1] ? " " + match[1] : "");
             }

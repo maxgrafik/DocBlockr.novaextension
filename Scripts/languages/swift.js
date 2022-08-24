@@ -61,15 +61,14 @@ class SwiftParser extends LanguageParser {
     }
 
     parseFunction(line) {
-        // Functions with nested functions will fail
-        // This is too much to handle with RegExp
         const regex = new RegExp(
             // func
             "func\\s+(?<fnName>" + this.settings.fnIdentifier + ")" +
             // generic
             "(?:<[^>]*?>)?" +
-            // arguments with nested parentheses (1 level)
-            "\\s*\\((?<args>(?:[^)(]+|\\((?:[^)(]+)*\\))*)?\\)" +
+            // arguments with nested parentheses (2 levels)
+            // https://stackoverflow.com/a/17759264
+            "\\s*\\((?<args>(?:[^()]*|\\([^()]*\\))*)\\)" +
             // throws
             "\\s*(?<throws>throws)?" +
             // return type
@@ -113,23 +112,23 @@ class SwiftParser extends LanguageParser {
 
     parseArg(line) {
         const regex = new RegExp(
-            // label or _
-            "(?<label>" + this.settings.varIdentifier + "|_)" +
+            // label or _ (optional)
+            "(?:(?<label>" + this.settings.varIdentifier + "|_)\\s+)?" +
             // name
-            "\\s+(?<name>" + this.settings.varIdentifier + ")" +
+            "(?<name>" + this.settings.varIdentifier + ")" +
             // colon
             "\\s*:\\s*" +
-            // inout
+            // inout (optional)
             "(?<inout>inout)?" +
             // type
             "\\s*(?<type>" +
             // - simple/generic type
             this.settings.varIdentifier + "(?:<[^>]+>)?" + "|" +
-            // array
+            // - array
             "\\[" + this.settings.varIdentifier + "\\]" + "|" +
-            // variadic
+            // - variadic
             this.settings.varIdentifier + "\\.{3}" + "|" +
-            // function
+            // - function
             "(?:@escaping)?\\s*\\([^)]*\\)(?:\\s*->\\s*" + this.settings.varIdentifier + ")" +
             // end of type group
             ")" +
@@ -178,12 +177,12 @@ class SwiftParser extends LanguageParser {
             return entry[0] === "@param";
         });
 
-        const throwsList = docBlock.filter(entry => {
-            return entry[0] === "@throws";
-        });
-
         const returnList = docBlock.filter(entry => {
             return entry[0] === "@returns";
+        });
+
+        const throwsList = docBlock.filter(entry => {
+            return entry[0] === "@throws";
         });
 
         if (list.length) {
@@ -206,20 +205,16 @@ class SwiftParser extends LanguageParser {
             });
         }
 
-        if (throwsList.length) {
-            tabStop++;
-            out.push("///");
-            out.push("/// - Throws: " + this.formatPlaceholder("description", tabStop));
-        }
-
         if (returnList.length) {
             tabStop++;
             out.push("///");
             out.push("/// - Returns: " + this.formatPlaceholder("description", tabStop));
         }
 
-        if (out.length > 1) {
+        if (throwsList.length) {
+            tabStop++;
             out.push("///");
+            out.push("/// - Throws: " + this.formatPlaceholder("description", tabStop));
         }
 
         return out;
@@ -247,35 +242,36 @@ class SwiftParser extends LanguageParser {
 
     getDocTags(line) {
         const tags = [
-            ["attention", "${0:description}"],
-            ["author", "${0:description}"],
-            ["authors", "${0:description}"],
-            ["bug", "${0:description}"],
-            ["complexity", "${0:description}"],
-            ["copyright", "${0:description}"],
-            ["date", "${0:description}"],
-            ["example", "${0:description}"],
-            ["experiment", "${0:description}"],
-            ["important", "${0:description}"],
-            ["invariant", "${0:description}"],
-            ["note", "${0:description}"],
-            ["parameter", "${0:name} ${1:description}"],
-            ["postcondition", "${0:description}"],
-            ["precondition", "${0:description}"],
-            ["remark", "${0:description}"],
-            ["remarks", "${0:description}"],
-            ["requires", "${0:description}"],
-            ["returns", "${0:description}"],
-            ["see", "${0:description}"],
-            ["since", "${0:description}"],
-            ["throws", "${0:description}"],
-            ["todo", "${0:description}"],
-            ["version", "${0:description}"],
-            ["warning", "${0:description}"]
+            ["Attention", ": ${0:description}"],
+            ["Author", ": ${0:description}"],
+            ["Authors", ": ${0:description}"],
+            ["Bug", ": ${0:description}"],
+            ["Complexity", ": ${0:description}"],
+            ["Copyright", ": ${0:description}"],
+            ["Date", ": ${0:description}"],
+            ["Example", ": ${0:description}"],
+            ["Experiment", ": ${0:description}"],
+            ["Important", ": ${0:description}"],
+            ["Invariant", ": ${0:description}"],
+            ["Note", ": ${0:description}"],
+            ["Parameter", " ${0:name}: ${1:description}"],
+            ["Postcondition", ": ${0:description}"],
+            ["Precondition", ": ${0:description}"],
+            ["Remark", ": ${0:description}"],
+            ["Remarks", ": ${0:description}"],
+            ["Requires", ": ${0:description}"],
+            ["Returns", ": ${0:description}"],
+            ["See", ": ${0:description}"],
+            ["SeeAlso", ": ${0:description}"],
+            ["Since", ": ${0:description}"],
+            ["Throws", ": ${0:description}"],
+            ["Todo", ": ${0:description}"],
+            ["Version", ": ${0:description}"],
+            ["Warning", ": ${0:description}"]
         ];
 
         const regex = new RegExp(
-            /^\/{3}\s+-(?<tag>.*)/
+            /^\/{3}[ ]-(?<tag>.*)/
         );
 
         const match = regex.exec(line);
@@ -284,7 +280,9 @@ class SwiftParser extends LanguageParser {
         }
 
         const matches = [];
-        const typed = match.groups.tag;
+        const typed = match.groups.tag
+            .toLowerCase()
+            .replace(/\b\w/g, s => s.toUpperCase());
 
         tags.forEach(tag => {
             if (tag[0].includes(typed)) {

@@ -138,10 +138,6 @@ class RustParser extends LanguageParser {
             out.push("/// " + this.formatPlaceholder("returns description", tabStop));
         }
 
-        if (out.length > 1) {
-            out.push("///");
-        }
-
         return out;
     }
 
