@@ -103,6 +103,8 @@ class RustParser extends LanguageParser {
     // Overrides LanguageParser's formatDocBlock()
     // because it's essentially Markdown here
 
+    // @see https://doc.rust-lang.org/rust-by-example/meta/doc.html
+
     formatDocBlock(docBlock) {
         const out = [];
 
@@ -125,7 +127,7 @@ class RustParser extends LanguageParser {
             paramList.forEach(entry => {
                 tabStop++;
                 out.push(
-                    "/// * `" + entry[2] + "` - " + this.formatPlaceholder("argument description", tabStop)
+                    "/// * `" + entry[2] + "` - " + this.formatPlaceholder("description", tabStop)
                 );
             });
         }
@@ -135,7 +137,7 @@ class RustParser extends LanguageParser {
             out.push("///");
             out.push("/// # Returns");
             out.push("///");
-            out.push("/// " + this.formatPlaceholder("returns description", tabStop));
+            out.push("/// " + this.formatPlaceholder("description", tabStop));
         }
 
         return out;
@@ -144,20 +146,64 @@ class RustParser extends LanguageParser {
     formatHeaderBlock(docBlock) {
         const out = [];
 
-        docBlock.forEach((entry, idx) => {
-            if (idx === 0) {
-                out.push("//! # " + entry[0]);
-                out.push("//!");
-            } else {
-                out.push("//! " + entry.join(" ").replace(/^@/, ""));
-            }
+        docBlock.forEach(entry => {
+            out.push("//! " + entry.join(" ").replace(/^@/, ""));
         });
 
         return out;
     }
 
-    getDocTags() {
-        return [];
+    // Updated 2022-08-25
+    //
+    // @see https://github.com/rust-lang/rfcs/blob/master/text/1574-more-api-documentation-conventions.md
+
+    getDocTags(line) {
+        const tagDefault = ["", "${0:description}"];
+        const tagExample = ["", "```", "${0:description}", "```"];
+
+        const tags = [
+            ["Aborts", this.formatTag(tagDefault)],
+            ["Errors", this.formatTag(tagDefault)],
+            ["Examples", this.formatTag(tagExample)],
+            ["Panics", this.formatTag(tagDefault)],
+            ["Safety", this.formatTag(tagDefault)],
+            ["Undefined Behavior", this.formatTag(tagDefault)]
+        ];
+
+        const regex = new RegExp(
+            /^\/{3}[ ]#(?<tag>.*)/
+        );
+
+        const match = regex.exec(line);
+        if (!match) {
+            return [];
+        }
+
+        const matches = [];
+        const typed = match.groups.tag
+            .toLowerCase()
+            .replace(/\b\w/g, s => s.toUpperCase());
+
+        tags.forEach(tag => {
+            if (tag[0].includes(typed)) {
+                matches.push(tag);
+            }
+        });
+
+        return matches;
+    }
+
+    formatTag(block) {
+        // Yep, slightly hacky
+        const eol = nova.workspace.activeTextEditor.document.eol;
+
+        let out = "";
+
+        block.forEach(line => {
+            out += eol + "///" + (line ? " " + line : "");
+        });
+
+        return out;
     }
 }
 

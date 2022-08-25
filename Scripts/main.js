@@ -63,7 +63,7 @@ exports.activate = function() {
         ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "swift", "typescript", "tsx"],
         new CompletionProvider(config),
         {
-            triggerChars: new Charset("*@-\\")
+            triggerChars: new Charset("*@-#\\")
         }
     );
 

@@ -32,9 +32,11 @@ class CompletionProvider {
          * as suggested by gwyneth (20220817)
          */
 
+        const syntax = editor.document.syntax;
+
         let isEnabled = false;
 
-        switch(editor.document.syntax) {
+        switch(syntax) {
         case "c":
         case "cpp":
         case "lsl":
@@ -79,6 +81,7 @@ class CompletionProvider {
             !line.endsWith("/**")
             && !line.match(/^\*\s+[@\\]/)
             && !line.match(/^\/{3}[ ]-/)
+            && !line.match(/^\/{3}[ ]#/)
         ) {
             return [];
         }
@@ -102,7 +105,7 @@ class CompletionProvider {
 
         let parser;
 
-        switch (editor.document.syntax) {
+        switch (syntax) {
         case "c":
         case "cpp":
         case "lsl":
@@ -146,12 +149,14 @@ class CompletionProvider {
 
         // provide tag completion if "@" (or "\" as for C/C++)
         if (
-            line.match(/^\*\s+[@\\]/) || line.match(/^\/{3}[ ]-/)
+            line.match(/^\*\s+[@\\]/)
+            || (syntax === "swift" && line.match(/^\/{3}[ ]-/))
+            || (syntax === "rust" && line.match(/^\/{3}[ ]#/))
         ) {
             this.cursorPosition = null;
             return this.provideTags(
                 parser.getDocTags(line),
-                editor.document.syntax
+                syntax
             );
         }
 
@@ -306,7 +311,9 @@ class CompletionProvider {
         matches.forEach(match => {
 
             let snippet;
-            if (syntax === "swift") {
+            if (
+                syntax === "rust" || syntax === "swift"
+            ) {
                 snippet = " " + match[0] + match[1];
             } else {
                 snippet = match[0] + (match[1] ? " " + match[1] : "");
@@ -334,9 +341,18 @@ class CompletionProvider {
             /^(?<tag>[@\\][^\s]+)?(?:\s*(?<remainder>.+))?$/
         );
 
-        docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
+        //docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
+
+        // file name and project name on separate lines
+        // seems to be more common
+
+        docBlock.push(["${FILENAME}"]);
+        docBlock.push(["${WORKSPACE_NAME}"]);
 
         if (this.config.customTags && this.config.customTags.length) {
+
+            docBlock.push([""]);
+
             this.config.customTags.forEach(tag => {
                 const match = regex.exec(tag);
                 if (!match) {

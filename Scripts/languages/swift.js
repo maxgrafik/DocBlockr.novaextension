@@ -194,7 +194,13 @@ class SwiftParser extends LanguageParser {
             });
         }
 
-        if (paramList.length) {
+        if (paramList.length === 1) {
+            tabStop++;
+            out.push("///");
+            out.push(
+                "/// - Parameter " + paramList[0][2] + ": " + this.formatPlaceholder("description", tabStop)
+            );
+        } else if (paramList.length > 1) {
             out.push("///");
             out.push("/// - Parameters:");
             paramList.forEach(entry => {
@@ -223,19 +229,20 @@ class SwiftParser extends LanguageParser {
     formatHeaderBlock(docBlock) {
         const out = [];
 
-        docBlock.forEach((entry, idx) => {
+        out.push("//");
+
+        docBlock.forEach(entry => {
             if (entry[0].charAt(0) === "@") {
                 entry[0] = entry[0]
                     .toLowerCase()
                     .replace(/\b\w/g, s => s.toUpperCase())
-                    .replace(/^@(.+)/, "- $1:");
+                    .replace(/^@(.+)/, "$1");
             }
 
-            out.push("/// " + entry.join(" "));
-            if (idx === 0) {
-                out.push("///");
-            }
+            out.push("// " + entry.join(" "));
         });
+
+        out.push("//");
 
         return out;
     }
