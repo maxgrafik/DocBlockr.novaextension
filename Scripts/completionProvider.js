@@ -346,8 +346,8 @@ class CompletionProvider {
         // file name and project name on separate lines
         // seems to be more common
 
-        docBlock.push(["${FILENAME}"]);
-        docBlock.push(["${WORKSPACE_NAME}"]);
+        docBlock.push(["$FILENAME"]);
+        docBlock.push(["$WORKSPACE_NAME"]);
 
         if (this.config.customTags && this.config.customTags.length) {
 
@@ -378,7 +378,7 @@ class CompletionProvider {
                 docBlock[rowIdx][colIdx] = docBlock[rowIdx][colIdx]
                     // why oh why no lookbehinds Apple?!
                     //.replaceAll(/(?<=\$\{)\d+(?=:)/g, () => tabStop++);
-                    .replaceAll(/\$\{\d+:/g, () => "${"+(tabStop++)+":");
+                    .replaceAll(/\$\{(?:\d+:)?/g, () => "${"+(tabStop++)+":");
             });
         });
 
