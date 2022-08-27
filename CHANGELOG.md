@@ -3,6 +3,7 @@
 * Added support for Swift *(experimental)*
 * Some Rust comment enhancements (following rust-lang RFC 1574)
 * Extension settings: Fixed a bug which prevented free-form text to be added to header comment blocks. Also, made the tab index for placeholders optional: ${placeholder} and ${0:placeholder} now both work.
+* More bugfixes
 
 
 ## Version 0.8.0

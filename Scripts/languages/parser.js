@@ -155,7 +155,7 @@ class LanguageParser {
 
         lines.forEach(line => {
             const matches = regex.exec(line);
-            if (line && matches) {
+            if (matches) {
                 const tag = matches.groups.tag;
                 const remainder = (matches.groups.remainder || "")
                     .replace(/\t/g, " ")
@@ -264,7 +264,8 @@ class LanguageParser {
             addEmptyLine = config.addEmptyLinePHP;
             break;
         case "rust":
-            // RustParser overrides formatDocBlock!!!
+        case "swift":
+            // Rust/Swift parser override formatDocBlock!!!
             break;
         case "typescript":
         case "tsx":
@@ -274,6 +275,7 @@ class LanguageParser {
         }
 
         let tabStop = 0;
+        let isFirstTagLine = false;
 
         out.push(this.settings.commentStyle);
 
@@ -281,6 +283,23 @@ class LanguageParser {
 
             let line = " *";
             let wrapStart = 0;
+
+            // add empty lines as configured
+            // handling more edge cases
+            if (/^[@\\]/.test(entry[0])) {
+                if (!isFirstTagLine) {
+                    isFirstTagLine = true;
+                    if (addEmptyLine > 0 && index > 0 && docBlock[index-1][0].trim() !== "") {
+                        out.push(" *");
+                    }
+                } else if (addEmptyLine === 2 && index > 0 && docBlock[index-1][0].trim() !== "") {
+                    const thisTag = entry[0].slice(1);
+                    const prevTag = docBlock[index-1][0].slice(1);
+                    if (thisTag !== prevTag) {
+                        out.push(" *");
+                    }
+                }
+            }
 
             entry.forEach((e, idx) => {
 
@@ -299,12 +318,6 @@ class LanguageParser {
 
                     line += (idx === 3) ? descSep : " ";
 
-                    // leading dollar signs need to be escaped e.g. PHP vars
-                    // if it's not a placeholder
-                    if (/^\$[^{]/.test(e) && !this.isNovaPlaceholder(e)) {
-                        e = "\\" + e;
-                    }
-
                     if (withPlaceholders) {
                         switch(e) {
                         case this.settings.tags.keySummary:
@@ -321,6 +334,15 @@ class LanguageParser {
                             tabStop++;
                             break;
                         }
+
+                        // leading dollar signs need to be escaped e.g. PHP vars
+                        // if it's not a placeholder and ONLY IF we actually use
+                        // the snippet format.
+                        // Note to self: commandHandler is using edit.insert()
+                        // which does not require escaping as it is plain text
+                        if (/^\$[^{]/.test(e) && !this.isNovaPlaceholder(e)) {
+                            e = "\\" + e;
+                        }
                     }
 
                     // the last column is most likely the description
@@ -329,15 +351,12 @@ class LanguageParser {
                         wrapStart = line.length;
                     }
 
-                    /**
-                     * For C languages replace @-sign with backslash \
-                     * if comments are configured to be Qt style
-                     */
+                    // for C languages replace @-sign with backslash \
+                    // if comments are configured to be Qt style
                     if (
-                        e.charAt(0) === "@" &&
-                        (this.settings.language === "cpp" ||
-                        this.settings.language === "objc") &&
-                        this.settings.commentStyle === "/*!"
+                        e.charAt(0) === "@"
+                        && (this.settings.language === "cpp" || this.settings.language === "objc")
+                        && this.settings.commentStyle === "/*!"
                     ) {
                         e = e.replace(/^@/, "\\");
                     }
@@ -365,18 +384,6 @@ class LanguageParser {
             } else {
                 out.push(line);
             }
-
-            // add empty lines as configured
-            if (addEmptyLine > 0 && index === 0 && docBlock.length > 1) {
-                out.push(" *");
-
-            } else if (addEmptyLine === 2 && index < docBlock.length-1) {
-                const nextTag = docBlock[index+1][0];
-                if (nextTag !== entry[0]) {
-                    out.push(" *");
-                }
-            }
-
         });
 
         out.push(" */");
