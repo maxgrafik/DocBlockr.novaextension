@@ -299,9 +299,9 @@ class LanguageParser {
 
                     line += (idx === 3) ? descSep : " ";
 
-                    // leading dollar signs need to be escaped
-                    // if it's not a placeholder, e.g. PHP vars
-                    if (/^\$[^{]/.test(e)) {
+                    // leading dollar signs need to be escaped e.g. PHP vars
+                    // if it's not a placeholder
+                    if (/^\$[^{]/.test(e) && !this.isNovaPlaceholder(e)) {
                         e = "\\" + e;
                     }
 
@@ -686,6 +686,21 @@ class LanguageParser {
             "while"
         ];
         return statements.includes(name);
+    }
+
+    isNovaPlaceholder(text) {
+        return [
+            "$SELECTED_TEXT",
+            "$DATE",
+            "$FILENAME",
+            "$FILE_PATH",
+            "$PARENT_FOLDER",
+            "$WORKSPACE_NAME",
+            "$AUTHOR_NAME",
+            "$SCM_REVISION",
+            "$PREVIOUS_TEXT",
+            "$PASTEBOARD_TEXT"
+        ].includes(text);
     }
 }
 

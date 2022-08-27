@@ -206,7 +206,7 @@
                     "title": "Tags",
                     "description": "You may add tags including values (e.g. @author your_name <your_email>) or just enter plain tags, in which case placeholders are automatically added depending on the specification.",
                     "type": "stringArray",
-                    "default": ["@author ${AUTHOR_NAME}"]
+                    "default": ["@author $AUTHOR_NAME"]
                 }
             ]
         },
