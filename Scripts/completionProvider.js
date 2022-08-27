@@ -338,7 +338,7 @@ class CompletionProvider {
     provideHeaderBlock(parser) {
         const docBlock = [];
         const regex = new RegExp(
-            /^(?<tag>[@\\][^\s]+)?(?:\s*(?<remainder>.+))?$/
+            /^(?<tag>[@\\][^\s]+)(?:\s*(?<remainder>.+))?$/
         );
 
         //docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
