@@ -138,10 +138,10 @@ class LanguageParser {
         }
 
         // The tags which we format/align
-        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception)$/;
+        const keywords = /^[@\\](option|param|property|raise|returns?|retval|result|yields?|yieldparam|yieldreturn|throws?|exception)$/;
 
         // The tags which have no arg column
-        let skipArgs = /^[@\\](returns?|retval|result|yields?|throws?|exception)$/;
+        let skipArgs = /^[@\\](raise|returns?|retval|result|yields?|yieldreturn|throws?|exception)$/;
 
         // Except for Java which has a throws arg
         if (this.settings.language === "java") {
@@ -216,7 +216,7 @@ class LanguageParser {
         const alignTags = config.alignTags;
         const maxLength = [];
 
-        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception|var|type)$/;
+        const keywords = /^[@\\](option|param|property|raise|returns?|retval|result|yields?|yieldparam|yieldreturn|throws?|exception|var|type)$/;
 
         /**
          * Calculate max width of each column
@@ -244,6 +244,8 @@ class LanguageParser {
 
         let addEmptyLine = 0;
         let descSep = " ";
+        let emptyLine = " *";
+        let blockEnd = " */";
 
         switch(this.settings.language) {
         case "cpp": // This is the language specified by the parser, not the editor’s syntax!
@@ -263,6 +265,11 @@ class LanguageParser {
         case "php":
             addEmptyLine = config.addEmptyLinePHP;
             break;
+        case "ruby":
+            addEmptyLine = 2;
+            emptyLine = "#";
+            blockEnd = "";
+            break;
         case "rust":
         case "swift":
             // Rust/Swift parser override formatDocBlock!!!
@@ -281,7 +288,7 @@ class LanguageParser {
 
         docBlock.forEach((entry, index) => {
 
-            let line = " *";
+            let line = emptyLine;
             let wrapStart = 0;
 
             // add empty lines as configured
@@ -290,13 +297,13 @@ class LanguageParser {
                 if (!isFirstTagLine) {
                     isFirstTagLine = true;
                     if (addEmptyLine > 0 && index > 0 && docBlock[index-1][0].trim() !== "") {
-                        out.push(" *");
+                        out.push(emptyLine);
                     }
                 } else if (addEmptyLine === 2 && index > 0 && docBlock[index-1][0].trim() !== "") {
                     const thisTag = entry[0].slice(1);
                     const prevTag = docBlock[index-1][0].slice(1);
                     if (thisTag !== prevTag) {
-                        out.push(" *");
+                        out.push(emptyLine);
                     }
                 }
             }
@@ -377,7 +384,7 @@ class LanguageParser {
                         tmp += word + " ";
                     } else {
                         out.push(tmp.replace(/\s+$/, ""));
-                        tmp = " * ".padEnd(wrapStart) + word + " ";
+                        tmp = (emptyLine+" ").padEnd(wrapStart) + word + " ";
                     }
                 });
                 out.push(tmp.replace(/\s+$/, ""));
@@ -386,7 +393,9 @@ class LanguageParser {
             }
         });
 
-        out.push(" */");
+        if (blockEnd !== "") {
+            out.push(blockEnd);
+        }
 
         return out;
     }

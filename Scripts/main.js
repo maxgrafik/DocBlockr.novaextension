@@ -10,6 +10,7 @@ const config = {
     enableJS    : true,
     enableObjC  : true,
     enablePHP   : true,
+    enableRuby  : true,
     enableRust  : true,
     enableSwift : true,
     enableTS    : true,
@@ -21,6 +22,7 @@ const config = {
     addEmptyLineTS   : 0,
     alignTags : 0,
     commentStyle : 0,
+    commentStyleRuby : 1,
     extendComments : false,
     ESLintComments : false
 };
@@ -60,10 +62,10 @@ exports.activate = function() {
      * Register Completion Assistant
      */
     nova.assistants.registerCompletionAssistant(
-        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "swift", "typescript", "tsx"],
+        ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "ruby", "rust", "swift", "typescript", "tsx"],
         new CompletionProvider(config),
         {
-            triggerChars: new Charset("*@-#\\")
+            triggerChars: new Charset("*@-#!/\\")
         }
     );
 
@@ -147,6 +149,9 @@ function registerCommentExtender() {
                 break;
             case "php":
                 isEnabled = config.enablePHP;
+                break;
+            case "ruby":
+                isEnabled = config.enableRuby;
                 break;
             case "rust":
                 isEnabled = config.enableRust;
