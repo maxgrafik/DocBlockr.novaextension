@@ -24,7 +24,7 @@ class TypeScriptParser extends LanguageParser {
             varIdentifier: validChars,
             fnIdentifier: validChars,
             clsIdentifier: validChars,
-            typeInfo: "{%s}", // if TypeScript were really that strongly typed, this should be null :P
+            typeInfo: "{%s}",
             tags: {
                 keySummary: "summary",
                 keyVar: "@type",

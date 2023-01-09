@@ -15,9 +15,9 @@
 
 ## Version 0.7.0
 
+* C/C++ support
 * Portuguese translation by [Gwyneth Llewelyn](https://github.com/GwynethLlewelyn)
 * German language additions ([Gwyneth Llewelyn](https://github.com/GwynethLlewelyn))
-* C/C++ support ... also requested by Gwyneth ;^)
 
 
 ## Version 0.6.1
