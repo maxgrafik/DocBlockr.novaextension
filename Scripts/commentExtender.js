@@ -65,9 +65,10 @@ class CommentExtender {
 
             let tabState = (/[\uFFFC]+/.test(text) ? false : true);
 
-            // Also ignore tabs for Swift/Rust comments
+            // Also ignore tabs for Ruby/Rust/Swift comments
 
             if (
+                editor.document.syntax === "ruby" ||
                 editor.document.syntax === "rust" ||
                 editor.document.syntax === "swift"
             ) {
@@ -103,7 +104,7 @@ class CommentExtender {
 
             let indent = "";
 
-            if (/^\s*\/\*[*!]]/.test(lineText)) {                   // cursor on docblock start line (/**)
+            if (/^\s*\/\*[*!]]/.test(lineText)) {                   // cursor on docblock start line (/** or /*!)
                 indent = lineText.replace(/^(\s*).*$/m, "$1 * ");
 
             } else if (/^\s*\*(?!\/)/.test(lineText)) {             // cursor on line starting with asterisk
@@ -111,6 +112,9 @@ class CommentExtender {
 
             } else if (/^\s*\/{3}/.test(lineText)) {                // cursor on line starting with '///'
                 indent = lineText.replace(/^(\s*)\/{3}(\s*).*$/m, "$1///$2");
+
+            } else if (/^\s*#/.test(lineText)) {                    // cursor on line starting with '#'
+                indent = lineText.replace(/^(\s*)#(\s*).*$/m, "$1#$2");
 
             } else {                                                // any other line
                 indent = lineText.replace(/^(\s*).*$/m, "$1");
@@ -184,11 +188,35 @@ class CommentExtender {
      * Get ranges of all docBlocks in document
      */
     getDocBlockRanges(editor) {
-        const regex = new RegExp(
-            // either a regular block (/** ... */) or a '///' comment line
-            /^(?:[\t ]*\/\*[*!].+?\*\/[\t ]*)$|^(?:[\t ]*\/{3}[^\n\r]*?[\n\r])/,
-            "gms"
-        );
+
+        let regex;
+        const syntax = editor.document.syntax;
+
+        switch(syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+        case "objc":
+            regex = new RegExp(/^(?:[\t ]*\/\*[*!].+?\*\/[\t ]*)$/, "gms");
+            break;
+        case "java":
+        case "javascript":
+        case "jsx":
+        case "php":
+        case "typescript":
+        case "tsx":
+            regex = new RegExp(/^(?:[\t ]*\/\*\*.+?\*\/[\t ]*)$/, "gms");
+            break;
+        case "ruby":
+            regex = new RegExp(/^(?:[\t ]*#[^\n\r]*?[\n\r])/, "gms");
+            break;
+        case "rust":
+        case "swift":
+            regex = new RegExp(/^(?:[\t ]*\/{3}[^\n\r]*?[\n\r])/, "gms");
+            break;
+        default:
+            return null;
+        }
 
         const range = new Range(0, editor.document.length);
         const text = editor.getTextInRange(range);

@@ -139,6 +139,9 @@ class CommandHandler {
         case "php":
             parser = new PHPParser();
             break;
+        case "ruby":
+            // There's no point in reparsing a Ruby comment
+            return;
         case "rust":
             // There's no point in reparsing a Rust comment
             return;
