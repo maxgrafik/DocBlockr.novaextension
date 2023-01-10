@@ -266,7 +266,7 @@ class LanguageParser {
             addEmptyLine = config.addEmptyLinePHP;
             break;
         case "ruby":
-            addEmptyLine = 2;
+            addEmptyLine = 1;
             emptyLine = "#";
             blockEnd = "";
             break;

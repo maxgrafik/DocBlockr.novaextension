@@ -1,5 +1,10 @@
 ## Version 0.9.0
 
+* **Note:** DocBlockr is now using language specific trigger chars, i.e.
+  * `/**` for Java/Javascript/PHP/etc.
+  * `/**` or `/*!` for C languages (depending on selected comment style)
+  * `///` for Rust/Swift
+  * `##` for Ruby
 * Added support for Swift *(experimental)*
 * Added support for Ruby *(experimental)*
 * Some Rust comment enhancements (following rust-lang RFC 1574)

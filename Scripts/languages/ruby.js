@@ -66,7 +66,7 @@ class RubyParser extends LanguageParser {
         ];
     }
 
-    parseVar(line) {
+    parseVar() {
         return null;
     }
 
