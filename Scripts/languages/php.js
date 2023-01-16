@@ -58,10 +58,13 @@ class PHPParser extends LanguageParser {
 
             // https://github.com/maxgrafik/DocBlockr.novaextension/issues/2
             // Does not match nested parentheses ...
-            "\\(\\s*(?<args>.*?)\\)" +
+            // "\\(\\s*(?<args>.*?)\\)" +
 
             // ... but recursion is not (yet) supported :(
-            //"(?<parentheses>\\((?<args>(?:(?>[^()]+)|(?&parentheses))*)\\))" +
+            // "(?<parentheses>\\((?<args>(?:(?>[^()]+)|(?&parentheses))*)\\))" +
+
+            // Solution: https://stackoverflow.com/a/17759264
+            "\\((?<args>(?:[^()]*|\\([^()]*\\))*)\\)" +
 
             "(?:\\s*\\:\\s*(?<nullable>\\?)?(?<rettype>[a-zA-Z0-9_\\x5c]*))?"
         );

@@ -3,7 +3,9 @@ const JavaParser = require("languages/java.js");
 const JavaScriptParser = require("languages/javascript.js");
 const ObjCParser = require("languages/objc.js");
 const PHPParser = require("languages/php.js");
+const RubyParser = require("languages/ruby.js");
 const RustParser = require("languages/rust.js");
+const SwiftParser = require("languages/swift.js");
 const TypeScriptParser = require("languages/typescript.js");
 
 /**
@@ -17,6 +19,7 @@ class CompletionProvider {
         this.eol = "\n";
         this.indent = "";
         this.cursorPosition = 0;
+        this.triggerChars = "";
     }
 
     provideCompletionItems(editor, context) {
@@ -31,9 +34,11 @@ class CompletionProvider {
          * as suggested by gwyneth (20220817)
          */
 
+        const syntax = editor.document.syntax;
+
         let isEnabled = false;
 
-        switch(editor.document.syntax) {
+        switch(syntax) {
         case "c":
         case "cpp":
         case "lsl":
@@ -52,8 +57,14 @@ class CompletionProvider {
         case "php":
             isEnabled = this.config.enablePHP;
             break;
+        case "ruby":
+            isEnabled = this.config.enableRuby;
+            break;
         case "rust":
             isEnabled = this.config.enableRust;
+            break;
+        case "swift":
+            isEnabled = this.config.enableSwift;
             break;
         case "typescript":
         case "tsx":
@@ -70,8 +81,56 @@ class CompletionProvider {
 
         const line = context.line.trim();
 
+        let isTagCompletion = false;
+
+        switch(syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+            this.triggerChars = this.config.commentStyle === 1 ? "/*!" : "/**";
+            isTagCompletion = line.match(/^\*\s+[@\\]/);
+            break;
+        case "java":
+            this.triggerChars = "/**";
+            isTagCompletion = line.match(/^\*\s+@/);
+            break;
+        case "javascript":
+        case "jsx":
+            this.triggerChars = "/**";
+            isTagCompletion = line.match(/^\*\s+@/);
+            break;
+        case "objc":
+            this.triggerChars = this.config.commentStyle === 1 ? "/*!" : "/**";
+            isTagCompletion = line.match(/^\*\s+[@\\]/);
+            break;
+        case "php":
+            this.triggerChars = "/**";
+            isTagCompletion = line.match(/^\*\s+@/);
+            break;
+        case "ruby":
+            this.triggerChars = "##";
+            isTagCompletion = line.match(/^#\s+@/);
+            break;
+        case "rust":
+            this.triggerChars = "///";
+            isTagCompletion = line.match(/^\/{3}[ ]#/);
+            break;
+        case "swift":
+            this.triggerChars = "///";
+            isTagCompletion = line.match(/^\/{3}[ ]-/);
+            break;
+        case "typescript":
+        case "tsx":
+            this.triggerChars = "/**";
+            isTagCompletion = line.match(/^\*\s+@/);
+            break;
+        default:
+            this.triggerChars = "";
+            isTagCompletion = false;
+        }
+
         // skip if not trigger chars
-        if (!line.endsWith("/**") && !line.match(/^\*\s+[@\\]/)) {
+        if (!line.endsWith(this.triggerChars) && !isTagCompletion) {
             return [];
         }
 
@@ -81,7 +140,11 @@ class CompletionProvider {
         this.cursorPosition = context.position;
 
         // return inline comment if line NOT only contains trigger chars
-        if (line.endsWith("/**") && line !== "/**") {
+        if (
+            ["javascript", "jsx", "typescript", "tsx"].includes(syntax)
+            && line.endsWith(this.triggerChars)
+            && line !== this.triggerChars
+        ) {
             return [this.provideInlineComment()];
         }
 
@@ -89,12 +152,12 @@ class CompletionProvider {
 
         // provide block comment if EOF
         if (!text.match(/^[\t ]*(.+)$/m)) {
-            return [this.provideBlockComment()];
+            return [this.provideBlockComment(syntax)];
         }
 
         let parser;
 
-        switch (editor.document.syntax) {
+        switch (syntax) {
         case "c":
         case "cpp":
         case "lsl":
@@ -113,8 +176,14 @@ class CompletionProvider {
         case "php":
             parser = new PHPParser();
             break;
+        case "ruby":
+            parser = new RubyParser(this.config);
+            break;
         case "rust":
             parser = new RustParser();
+            break;
+        case "swift":
+            parser = new SwiftParser();
             break;
         case "typescript":
         case "tsx":
@@ -133,11 +202,12 @@ class CompletionProvider {
         nova.workspace.context.set("maxgrafik.DocBlockr.evt.keyTab", false);
 
 
-        // provide tag completion if "@" (or "\" as for C/C++)
-        if (line.match(/^\*\s+[@\\]/)) {
+        // provide tag completion
+        if (isTagCompletion) {
             this.cursorPosition = null;
             return this.provideTags(
-                parser.getDocTags(line)
+                parser.getDocTags(line),
+                syntax
             );
         }
 
@@ -161,10 +231,11 @@ class CompletionProvider {
         // provide block comment if next is another comment or an empty line
         if (
             text.trim().match(/^\/(\*|\/)/) ||
+            text.trim().match(/^#/) ||
             (lines.length > 1 && lines[0].trim() === "" && lines[1].trim() === "")
         ) {
             completionItems.push(
-                this.provideBlockComment()
+                this.provideBlockComment(syntax)
             );
 
         } else {
@@ -174,7 +245,7 @@ class CompletionProvider {
 
             // provide block comment if no definition
             if (definition === "") {
-                completionItems.push(this.provideBlockComment());
+                completionItems.push(this.provideBlockComment(syntax));
             }
 
             // parse definition and get docBlock
@@ -182,13 +253,18 @@ class CompletionProvider {
                 const docBlock = parser.parseDefinition(definition);
                 if (!docBlock) {
                     // provide block comment if no docBlock returned
-                    completionItems.push(this.provideBlockComment());
+                    completionItems.push(this.provideBlockComment(syntax));
                 } else {
                     // we finally have a docBlock, yay!
-                    const snippet = parser.formatDocBlock(docBlock, this.config, true);
+                    let snippet = "";
+                    if (syntax === "ruby" && this.config.commentStyleRuby === 0) {
+                        snippet = parser.formatRDocBlock(docBlock, this.config, true);
+                    } else {
+                        snippet = parser.formatDocBlock(docBlock, this.config, true);
+                    }
                     completionItems.push(
                         this.createCompletionItem(
-                            "/** DocBlock */",
+                            "DocBlock",
                             snippet.join(this.eol),
                             "Insert a code documentation block"
                         )
@@ -199,7 +275,10 @@ class CompletionProvider {
 
         // Not related to DocBlockr,
         // but I'm too lazy to type ESLint disable rules
-        if (this.config.ESLintComments) {
+        if (
+            ["javascript", "jsx", "typescript", "tsx"].includes(syntax)
+            && this.config.ESLintComments
+        ) {
             completionItems.push(this.provideESLintComment());
         }
 
@@ -215,6 +294,9 @@ class CompletionProvider {
      */
     createCompletionItem(label, text, documentation) {
         const item = new CompletionItem(label, CompletionItemKind.StyleDirective);
+        if (this.cursorPosition !== null) {
+            item.filterText = this.triggerChars;
+        }
         item.insertText = (this.cursorPosition === null) ? text : "";
         item.insertTextFormat = InsertTextFormat.Snippet;
         if (documentation !== null) {
@@ -222,7 +304,7 @@ class CompletionProvider {
         }
         if (this.cursorPosition !== null) {
             item.range = new Range(
-                Math.max(0, this.cursorPosition-3),
+                Math.max(0, this.cursorPosition-this.triggerChars.length),
                 this.cursorPosition
             );
 
@@ -246,7 +328,7 @@ class CompletionProvider {
              * Nevertheless, I expect this to fail again anytime :P
              */
 
-            const insertPosition = Math.max(0, this.cursorPosition /* -3 */);
+            const insertPosition = Math.max(0, this.cursorPosition);
 
             item.additionalTextEdits = [
                 TextEdit.insert(
@@ -265,7 +347,7 @@ class CompletionProvider {
      */
     provideInlineComment() {
         return this.createCompletionItem(
-            "/** comment */",
+            "Comment (inline)",
             "/** ${0:comment} */",
             null
         );
@@ -275,10 +357,33 @@ class CompletionProvider {
      * Provide block comment
      * @returns {CompletionItem}
      */
-    provideBlockComment() {
+    provideBlockComment(syntax) {
+
+        let snippet = "";
+
+        switch (syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+        case "java":
+        case "javascript":
+        case "jsx":
+        case "objc":
+        case "php":
+        case "typescript":
+        case "tsx":
+            snippet = [this.triggerChars, " * ${0:comment}", " */"].join(this.eol);
+            break;
+        case "ruby":
+            snippet = ["=begin", "${0:comment}", "=end"].join(this.eol);
+            break;
+        default:
+            return null;
+        }
+
         return this.createCompletionItem(
-            "/** comment */",
-            ["/**", " * ${0:comment}", " */"].join(this.eol),
+            "Comment (block)",
+            snippet,
             null
         );
     }
@@ -287,13 +392,23 @@ class CompletionProvider {
      * Provide matching @tags
      * @returns {Array}
      */
-    provideTags(matches) {
+    provideTags(matches, syntax) {
         const items = [];
         matches.forEach(match => {
+
+            let snippet;
+            if (
+                syntax === "rust" || syntax === "swift"
+            ) {
+                snippet = " " + match[0] + match[1];
+            } else {
+                snippet = match[0] + (match[1] ? " " + match[1] : "");
+            }
+
             items.push(
                 this.createCompletionItem(
                     match[0],
-                    match[0] + (match[1] ? " " + match[1] : ""),
+                    snippet,
                     null
                 )
             );
@@ -309,12 +424,16 @@ class CompletionProvider {
     provideHeaderBlock(parser) {
         const docBlock = [];
         const regex = new RegExp(
-            /^(?<tag>[@\\][^\s]+)?(?:\s*(?<remainder>.+))?$/
+            /^(?<tag>[@\\][^\s]+)(?:\s*(?<remainder>.+))?$/
         );
 
-        docBlock.push(["${WORKSPACE_NAME} - ${FILENAME}"]);
+        docBlock.push(["$FILENAME"]);
+        docBlock.push(["$WORKSPACE_NAME"]);
 
         if (this.config.customTags && this.config.customTags.length) {
+
+            docBlock.push([""]);
+
             this.config.customTags.forEach(tag => {
                 const match = regex.exec(tag);
                 if (!match) {
@@ -340,19 +459,23 @@ class CompletionProvider {
                 docBlock[rowIdx][colIdx] = docBlock[rowIdx][colIdx]
                     // why oh why no lookbehinds Apple?!
                     //.replaceAll(/(?<=\$\{)\d+(?=:)/g, () => tabStop++);
-                    .replaceAll(/\$\{\d+:/g, () => "${"+(tabStop++)+":");
+                    .replaceAll(/\$\{(?:\d+:)?/g, () => "${"+(tabStop++)+":");
             });
         });
 
         let snippet;
-        if (parser.settings.language === "rust") {
+        if (
+            (parser.settings.language === "ruby" && this.config.commentStyleRuby === 0) ||
+            parser.settings.language === "rust" ||
+            parser.settings.language === "swift"
+        ) {
             snippet = parser.formatHeaderBlock(docBlock);
         } else {
             snippet = parser.formatDocBlock(docBlock, this.config);
         }
 
         return this.createCompletionItem(
-            "/** Header */",
+            "Header",
             snippet.join(this.eol),
             "Insert a header block"
         );
@@ -364,7 +487,7 @@ class CompletionProvider {
      */
     provideESLintComment() {
         return this.createCompletionItem(
-            "/* ESLint comment */",
+            "ESLint rule",
             "/* eslint-disable-next-line ${0:rule} */",
             "ESLint configuration comment"
         );

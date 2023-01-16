@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",
@@ -20,7 +20,9 @@
         "onLanguage:lsl",
         "onLanguage:objc",
         "onLanguage:php",
+        "onLanguage:ruby",
         "onLanguage:rust",
+        "onLanguage:swift",
         "onLanguage:typescript",
         "onLanguage:tsx"
     ],
@@ -32,7 +34,7 @@
                 "command": "maxgrafik.DocBlockr.cmd.insertDocBlock",
                 "when": "editorHasFocus && !editorHasSelection",
                 "filters": {
-                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "rust", "typescript", "tsx"]
+                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "ruby", "rust", "swift", "typescript", "tsx"]
                 }
             },
             {
@@ -51,7 +53,7 @@
                 "shortcut": "return",
                 "when": "editorHasFocus && !editorHasSelection && maxgrafik.DocBlockr.evt.keyReturn",
                 "filters": {
-                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "typescript", "tsx"]
+                    "syntaxes": ["c", "cpp", "java", "javascript", "jsx", "lsl", "objc", "php", "ruby", "rust", "swift", "typescript", "tsx"]
                 }
             },
             {
@@ -104,8 +106,20 @@
                     "default": true
                 },
                 {
+                    "key": "maxgrafik.DocBlockr.config.enableRuby",
+                    "title": "Ruby",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
                     "key": "maxgrafik.DocBlockr.config.enableRust",
                     "title": "Rust",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.enableSwift",
+                    "title": "Swift",
                     "type": "boolean",
                     "default": true
                 },
@@ -179,10 +193,19 @@
                 },
                 {
                     "key": "maxgrafik.DocBlockr.config.commentStyle",
-                    "title": "Comment Style",
+                    "title": "C Comment Style",
                     "description": "Style for C/C++ and ObjC/ObjC++ DocBlocks",
                     "type": "enum",
                     "values": [[0, "Javadoc  ( /** @param */ )"], [1, "Qt  ( /*! \\param */ )"]],
+                    "default": 1,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.config.commentStyleRuby",
+                    "title": "Ruby Comment Style",
+                    "description": "Style for Ruby DocBlocks",
+                    "type": "enum",
+                    "values": [[0, "RDoc"], [1, "YARD"]],
                     "default": 1,
                     "radio": false
                 }
@@ -199,7 +222,7 @@
                     "title": "Tags",
                     "description": "You may add tags including values (e.g. @author your_name <your_email>) or just enter plain tags, in which case placeholders are automatically added depending on the specification.",
                     "type": "stringArray",
-                    "default": ["@author ${AUTHOR_NAME}"]
+                    "default": ["@author $AUTHOR_NAME"]
                 }
             ]
         },
@@ -273,8 +296,24 @@
                     "default": null
                 },
                 {
+                    "key": "maxgrafik.DocBlockr.workspace.enableRuby",
+                    "title": "Ruby",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "radio": false,
+                    "default": null
+                },
+                {
                     "key": "maxgrafik.DocBlockr.workspace.enableRust",
                     "title": "Rust",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "radio": false,
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.enableSwift",
+                    "title": "Swift",
                     "type": "enum",
                     "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
                     "radio": false,
@@ -353,9 +392,17 @@
                 },
                 {
                     "key": "maxgrafik.DocBlockr.workspace.commentStyle",
-                    "title": "Comment Style",
+                    "title": "C Comment Style",
                     "type": "enum",
                     "values": [[null, "Use global settings"], [0, "Javadoc  ( /** @param */ )"], [1, "Qt  ( /*! \\param */ )"]],
+                    "default": null,
+                    "radio": false
+                },
+                {
+                    "key": "maxgrafik.DocBlockr.workspace.commentStyleRuby",
+                    "title": "Ruby Comment Style",
+                    "type": "enum",
+                    "values": [[null, "Use global settings"], [0, "RDoc"], [1, "YARD"]],
                     "default": null,
                     "radio": false
                 }

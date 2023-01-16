@@ -16,7 +16,9 @@ DocBlockr for Nova currently supports
 * JavaScript/JSX
 * ObjC/ObjC++
 * PHP
+* Ruby *(experimental)*
 * Rust
+* Swift *(experimental)*
 * TypeScript/TSX
 
 You can read more about documentation comments here: [JSDoc](https://jsdoc.app/) and [phpDocumentor](https://phpdoc.org).

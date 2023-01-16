@@ -138,10 +138,10 @@ class LanguageParser {
         }
 
         // The tags which we format/align
-        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception)$/;
+        const keywords = /^[@\\](option|param|property|raise|returns?|retval|result|yields?|yieldparam|yieldreturn|throws?|exception)$/;
 
         // The tags which have no arg column
-        let skipArgs = /^[@\\](returns?|retval|result|yields?|throws?|exception)$/;
+        let skipArgs = /^[@\\](raise|returns?|retval|result|yields?|yieldreturn|throws?|exception)$/;
 
         // Except for Java which has a throws arg
         if (this.settings.language === "java") {
@@ -155,7 +155,7 @@ class LanguageParser {
 
         lines.forEach(line => {
             const matches = regex.exec(line);
-            if (line && matches) {
+            if (matches) {
                 const tag = matches.groups.tag;
                 const remainder = (matches.groups.remainder || "")
                     .replace(/\t/g, " ")
@@ -216,7 +216,7 @@ class LanguageParser {
         const alignTags = config.alignTags;
         const maxLength = [];
 
-        const keywords = /^[@\\](param|property|returns?|retval|result|yields?|throws?|exception|var|type)$/;
+        const keywords = /^[@\\](option|param|property|raise|returns?|retval|result|yields?|yieldparam|yieldreturn|throws?|exception|var|type)$/;
 
         /**
          * Calculate max width of each column
@@ -244,6 +244,8 @@ class LanguageParser {
 
         let addEmptyLine = 0;
         let descSep = " ";
+        let emptyLine = " *";
+        let blockEnd = " */";
 
         switch(this.settings.language) {
         case "cpp": // This is the language specified by the parser, not the editor’s syntax!
@@ -263,8 +265,14 @@ class LanguageParser {
         case "php":
             addEmptyLine = config.addEmptyLinePHP;
             break;
+        case "ruby":
+            addEmptyLine = 1;
+            emptyLine = "#";
+            blockEnd = "";
+            break;
         case "rust":
-            // RustParser overrides formatDocBlock!!!
+        case "swift":
+            // Rust/Swift parser override formatDocBlock!!!
             break;
         case "typescript":
         case "tsx":
@@ -274,13 +282,31 @@ class LanguageParser {
         }
 
         let tabStop = 0;
+        let isFirstTagLine = false;
 
         out.push(this.settings.commentStyle);
 
         docBlock.forEach((entry, index) => {
 
-            let line = " *";
+            let line = emptyLine;
             let wrapStart = 0;
+
+            // add empty lines as configured
+            // handling more edge cases
+            if (/^[@\\]/.test(entry[0])) {
+                if (!isFirstTagLine) {
+                    isFirstTagLine = true;
+                    if (addEmptyLine > 0 && index > 0 && docBlock[index-1][0].trim() !== "") {
+                        out.push(emptyLine);
+                    }
+                } else if (addEmptyLine === 2 && index > 0 && docBlock[index-1][0].trim() !== "") {
+                    const thisTag = entry[0].slice(1);
+                    const prevTag = docBlock[index-1][0].slice(1);
+                    if (thisTag !== prevTag) {
+                        out.push(emptyLine);
+                    }
+                }
+            }
 
             entry.forEach((e, idx) => {
 
@@ -299,12 +325,6 @@ class LanguageParser {
 
                     line += (idx === 3) ? descSep : " ";
 
-                    // leading dollar signs need to be escaped
-                    // if it's not a placeholder, e.g. PHP vars
-                    if (/^\$[^{]/.test(e)) {
-                        e = "\\" + e;
-                    }
-
                     if (withPlaceholders) {
                         switch(e) {
                         case this.settings.tags.keySummary:
@@ -321,6 +341,15 @@ class LanguageParser {
                             tabStop++;
                             break;
                         }
+
+                        // leading dollar signs need to be escaped e.g. PHP vars
+                        // if it's not a placeholder and ONLY IF we actually use
+                        // the snippet format.
+                        // Note to self: commandHandler is using edit.insert()
+                        // which does not require escaping as it is plain text
+                        if (/^\$[^{]/.test(e) && !this.isNovaPlaceholder(e)) {
+                            e = "\\" + e;
+                        }
                     }
 
                     // the last column is most likely the description
@@ -329,15 +358,12 @@ class LanguageParser {
                         wrapStart = line.length;
                     }
 
-                    /**
-                     * For C languages replace @-sign with backslash \
-                     * if comments are configured to be Qt style
-                     */
+                    // for C languages replace @-sign with backslash \
+                    // if comments are configured to be Qt style
                     if (
-                        e.charAt(0) === "@" &&
-                        (this.settings.language === "cpp" ||
-                        this.settings.language === "objc") &&
-                        this.settings.commentStyle === "/*!"
+                        e.charAt(0) === "@"
+                        && (this.settings.language === "cpp" || this.settings.language === "objc")
+                        && this.settings.commentStyle === "/*!"
                     ) {
                         e = e.replace(/^@/, "\\");
                     }
@@ -358,28 +384,18 @@ class LanguageParser {
                         tmp += word + " ";
                     } else {
                         out.push(tmp.replace(/\s+$/, ""));
-                        tmp = " * ".padEnd(wrapStart) + word + " ";
+                        tmp = (emptyLine+" ").padEnd(wrapStart) + word + " ";
                     }
                 });
                 out.push(tmp.replace(/\s+$/, ""));
             } else {
                 out.push(line);
             }
-
-            // add empty lines as configured
-            if (addEmptyLine > 0 && index === 0 && docBlock.length > 1) {
-                out.push(" *");
-
-            } else if (addEmptyLine === 2 && index < docBlock.length-1) {
-                const nextTag = docBlock[index+1][0];
-                if (nextTag !== entry[0]) {
-                    out.push(" *");
-                }
-            }
-
         });
 
-        out.push(" */");
+        if (blockEnd !== "") {
+            out.push(blockEnd);
+        }
 
         return out;
     }
@@ -686,6 +702,21 @@ class LanguageParser {
             "while"
         ];
         return statements.includes(name);
+    }
+
+    isNovaPlaceholder(text) {
+        return [
+            "$SELECTED_TEXT",
+            "$DATE",
+            "$FILENAME",
+            "$FILE_PATH",
+            "$PARENT_FOLDER",
+            "$WORKSPACE_NAME",
+            "$AUTHOR_NAME",
+            "$SCM_REVISION",
+            "$PREVIOUS_TEXT",
+            "$PASTEBOARD_TEXT"
+        ].includes(text);
     }
 }
 
