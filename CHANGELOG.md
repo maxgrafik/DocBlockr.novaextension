@@ -1,3 +1,8 @@
+## Version 0.9.1
+
+* Bugfix: Add newline extension for rust header doc comments ([#17](https://github.com/maxgrafik/DocBlockr.novaextension/pull/17), by [nlydv](https://github.com/nlydv)).
+
+
 ## Version 0.9.0
 
 * **Note:** DocBlockr is now using language specific trigger chars, i.e.
