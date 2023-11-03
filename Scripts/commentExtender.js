@@ -113,6 +113,9 @@ class CommentExtender {
             } else if (/^\s*\/{3}/.test(lineText)) {                // cursor on line starting with '///'
                 indent = lineText.replace(/^(\s*)\/{3}(\s*).*$/m, "$1///$2");
 
+            } else if (/^\s*\/{2}!/.test(lineText)) {                // cursor on line starting with '//!'
+                indent = lineText.replace(/^(\s*)\/{2}!(\s*).*$/m, "$1//!$2");
+
             } else if (/^\s*#/.test(lineText)) {                    // cursor on line starting with '#'
                 indent = lineText.replace(/^(\s*)#(\s*).*$/m, "$1#$2");
 
@@ -211,6 +214,8 @@ class CommentExtender {
             regex = new RegExp(/^(?:[\t ]*#[^\n\r]*?[\n\r])/, "gms");
             break;
         case "rust":
+            regex = new RegExp(/^(?:[\t ]*\/{2}[/!][^\n\r]*?[\n\r])/, "gms");
+            break;
         case "swift":
             regex = new RegExp(/^(?:[\t ]*\/{3}[^\n\r]*?[\n\r])/, "gms");
             break;
