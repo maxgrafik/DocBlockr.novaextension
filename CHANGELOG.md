@@ -1,3 +1,8 @@
+## Version 0.9.2
+
+* Bugfix: Menu command *Insert DocBlock* and *Format DocBlock* should work again (has nobody noticed this was broken?).
+
+
 ## Version 0.9.1
 
 * Bugfix: Add newline extension for rust header doc comments ([#17](https://github.com/maxgrafik/DocBlockr.novaextension/pull/17), by [nlydv](https://github.com/nlydv)).

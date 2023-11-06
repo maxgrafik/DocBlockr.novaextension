@@ -3,6 +3,7 @@ const JavaParser = require("languages/java.js");
 const JavaScriptParser = require("languages/javascript.js");
 const ObjCParser = require("languages/objc.js");
 const PHPParser = require("languages/php.js");
+const RubyParser = require("languages/ruby.js");
 const TypeScriptParser = require("languages/typescript.js");
 const CompletionProvider = require("completionProvider.js");
 
@@ -18,6 +19,46 @@ class CommandHandler {
 
     insertDocBlock(editor) {
 
+        let triggerChars = "";
+
+        const syntax = editor.document.syntax;
+
+        switch(syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+            triggerChars = this.config.commentStyle === 1 ? "/*!" : "/**";
+            break;
+        case "java":
+            triggerChars = "/**";
+            break;
+        case "javascript":
+        case "jsx":
+            triggerChars = "/**";
+            break;
+        case "objc":
+            triggerChars = this.config.commentStyle === 1 ? "/*!" : "/**";
+            break;
+        case "php":
+            triggerChars = "/**";
+            break;
+        case "ruby":
+            triggerChars = "##";
+            break;
+        case "rust":
+            triggerChars = "///";
+            break;
+        case "swift":
+            triggerChars = "///";
+            break;
+        case "typescript":
+        case "tsx":
+            triggerChars = "/**";
+            break;
+        default:
+            triggerChars = "";
+        }
+
         // get current line
         const selectedRange = editor.selectedRange;
         const lineRange = editor.getLineRangeForRange(selectedRange);
@@ -26,7 +67,7 @@ class CommandHandler {
         const completionProvider = new CompletionProvider(this.config);
         const items = completionProvider.provideCompletionItems(editor,
             {
-                line: currentLine + "/**",
+                line: currentLine + triggerChars,
                 position: editor.selectedRange.start
             }
         );
@@ -86,11 +127,35 @@ class CommandHandler {
      * Get ranges of all (complete!) docblocks in document
      */
     getDocBlockRanges(editor) {
-        const regex = new RegExp(
-            // added negative lookahead (?!/**) to not match unfinished docblocks
-            /^[\t ]*\/\*[*!](?:(?!\/\*[*!]).)+?\*\/[\t ]*$/,
-            "gms"
-        );
+
+        let regex;
+        const syntax = editor.document.syntax;
+
+        switch(syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+        case "objc":
+            // negative lookahead (?!/*[*!]) to not match unfinished docblocks
+            regex = new RegExp(/^[\t ]*\/\*[*!](?:(?!\/\*[*!]).)+?\*\/[\t ]*$/, "gms");
+            break;
+        case "java":
+        case "javascript":
+        case "jsx":
+        case "php":
+        case "typescript":
+        case "tsx":
+            // negative lookahead (?!/**) to not match unfinished docblocks
+            regex = new RegExp(/^[\t ]*\/\*\*(?:(?!\/\*\*).)+?\*\/[\t ]*$/, "gms");
+            break;
+        case "ruby":
+            // this one is tricky - we MUST NOT match the final eol
+            regex = new RegExp(/^(?:[\t ]*##[\n\r](?:[\t ]*#[^\n\r]*[\n\r])+(?:[\t ]*#[^\n\r]*))/, "gm");
+            break;
+        default:
+            return null;
+        }
+
 
         const range = new Range(0, editor.document.length);
         const text = editor.getTextInRange(range);
@@ -140,8 +205,12 @@ class CommandHandler {
             parser = new PHPParser();
             break;
         case "ruby":
-            // There's no point in reparsing a Ruby comment
-            return;
+            // There's no point in reparsing a Ruby comment if it's RDoc
+            if (this.config.commentStyleRuby === 0) {
+                return;
+            }
+            parser = new RubyParser(this.config);
+            break;
         case "rust":
             // There's no point in reparsing a Rust comment
             return;

@@ -100,6 +100,7 @@ class LanguageParser {
             .replace(/^[\t ]*\/\*[*!][\t ]*$/m, "")
             .replace(/^[\t ]*\*\/[\t ]*/m, "")
             .replace(/^[\t ]*\*[\t ]*/gm, "")
+            .replace(/^[\t ]*#{1,2}[\t ]*/gm, "")
             .trim();
 
         if (docBlock === "") {
