@@ -282,6 +282,9 @@ class CompletionProvider {
             completionItems.push(this.provideESLintComment());
         }
 
+        // Provide Bookmark comment
+        completionItems.push(this.provideBookmarkComment(syntax));
+
         return completionItems;
     }
 
@@ -293,7 +296,14 @@ class CompletionProvider {
      * @returns {CompletionItem}
      */
     createCompletionItem(label, text, documentation) {
-        const item = new CompletionItem(label, CompletionItemKind.StyleDirective);
+
+        // NOTE:
+        // kind = '40' (bookmark icon) is not documented
+        // works in Nova 10.6 but may fail or give unexpected results in other versions
+
+        const kind = (label === "Bookmark") ? 40 : CompletionItemKind.StyleDirective;
+        const item = new CompletionItem(label, kind);
+
         if (this.cursorPosition !== null) {
             item.filterText = this.triggerChars;
         }
@@ -478,6 +488,49 @@ class CompletionProvider {
             "Header",
             snippet.join(this.eol),
             "Insert a header block"
+        );
+    }
+
+    /**
+     * Provide bookmark comment
+     * @returns {CompletionItem}
+     */
+    provideBookmarkComment(syntax) {
+
+        let snippet = "";
+
+        switch (syntax) {
+        case "c":
+        case "cpp":
+        case "lsl":
+        case "java":
+        case "javascript":
+        case "jsx":
+        case "php":
+        case "typescript":
+        case "tsx":
+            snippet = "//! ${0:bookmark}";
+            break;
+        case "objc":
+            snippet = "// #pragma mark ${0:bookmark}";
+            break;
+        case "ruby":
+            snippet = "#! ${0:bookmark}";
+            break;
+        case "rust":
+            snippet = "///! ${0:bookmark}";
+            break;
+        case "swift":
+            snippet = "// MARK: ${0:bookmark}";
+            break;
+        default:
+            return null;
+        }
+
+        return this.createCompletionItem(
+            "Bookmark",
+            snippet,
+            null
         );
     }
 

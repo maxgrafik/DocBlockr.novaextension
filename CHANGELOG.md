@@ -2,6 +2,7 @@
 
 * Bugfix: Menu command *Insert DocBlock* and *Format DocBlock* should work again (has nobody noticed this was broken?).
 * Updated README to better illustrate how additional tags for header comments work.
+* New feature: [Bookmark comments](https://help.panic.com/nova/symbols-sidebar/#placing-bookmarks)
 
 
 ## Version 0.9.1
