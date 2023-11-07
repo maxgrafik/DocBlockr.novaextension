@@ -213,14 +213,13 @@
         },
         {
             "key": "maxgrafik.DocBlockr.config.sectionCustomTags",
-            "title": "Custom Tags",
-            "description": "Specify which tags should be added to header blocks",
+            "title": "Header Tags",
             "type": "section",
             "children": [
                 {
                     "key": "maxgrafik.DocBlockr.config.customTags",
                     "title": "Tags",
-                    "description": "You may add tags including values (e.g. @author your_name <your_email>) or just enter plain tags, in which case placeholders are automatically added depending on the specification.",
+                    "description": "Specify which tags should be added to header blocks",
                     "type": "stringArray",
                     "default": ["@author $AUTHOR_NAME"]
                 }
@@ -410,7 +409,7 @@
         },
         {
             "key": "maxgrafik.DocBlockr.workspace.sectionCustomTags",
-            "title": "Custom Tags",
+            "title": "Header Tags",
             "type": "section",
             "children": [
                 {

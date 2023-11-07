@@ -1,6 +1,7 @@
 ## Version 0.9.2
 
 * Bugfix: Menu command *Insert DocBlock* and *Format DocBlock* should work again (has nobody noticed this was broken?).
+* Updated README to better illustrate how additional tags for header comments work.
 
 
 ## Version 0.9.1
