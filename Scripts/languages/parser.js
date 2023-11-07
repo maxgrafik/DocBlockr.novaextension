@@ -96,12 +96,37 @@ class LanguageParser {
         const out = [];
 
         // de-indent and strip all comment markers
-        docBlock = docBlock
-            .replace(/^[\t ]*\/\*[*!][\t ]*$/m, "")
-            .replace(/^[\t ]*\*\/[\t ]*/m, "")
-            .replace(/^[\t ]*\*[\t ]*/gm, "")
-            .replace(/^[\t ]*#{1,2}[\t ]*/gm, "")
-            .trim();
+
+        // This is the language specified by the parser, not the editor’s syntax!
+        switch(this.settings.language) {
+        case "cpp":
+        case "objc":
+            docBlock = docBlock
+                .replace(/^[\t ]*\/\*[*!][\t ]*$/m, "")
+                .replace(/^[\t ]*\*\/[\t ]*/m, "")
+                .replace(/^[\t ]*\*[\t ]*/gm, "")
+                .trim();
+            break;
+        case "java":
+        case "javascript":
+        case "jsx":
+        case "php":
+        case "typescript":
+        case "tsx":
+            docBlock = docBlock
+                .replace(/^[\t ]*\/\*\*[\t ]*$/m, "")
+                .replace(/^[\t ]*\*\/[\t ]*/m, "")
+                .replace(/^[\t ]*\*[\t ]*/gm, "")
+                .trim();
+            break;
+        case "ruby":
+            docBlock = docBlock
+                .replace(/^[\t ]*#{1,2}[\t ]*/gm, "")
+                .trim();
+            break;
+        default:
+            return null;
+        }
 
         if (docBlock === "") {
             return null;
@@ -248,8 +273,9 @@ class LanguageParser {
         let emptyLine = " *";
         let blockEnd = " */";
 
+        // This is the language specified by the parser, not the editor’s syntax!
         switch(this.settings.language) {
-        case "cpp": // This is the language specified by the parser, not the editor’s syntax!
+        case "cpp":
             addEmptyLine = config.addEmptyLineCPP;
             break;
         case "java":
