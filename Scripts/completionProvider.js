@@ -541,8 +541,8 @@ class CompletionProvider {
     provideESLintComment() {
         return this.createCompletionItem(
             "ESLint rule",
-            "/* eslint-disable-next-line ${0:rule} */",
-            "ESLint configuration comment"
+            "// eslint-disable-next-line ${0:rule}",
+            null
         );
     }
 
