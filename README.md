@@ -32,7 +32,7 @@ DocBlockr may additionally provide a header comment, if the cursor is at the top
 * tags only: e.g. **@author** (in which case DocBlockr adds the missing placeholders according to the doc comment specification)
 * free-form text
 
-Each of these also accept tabbable placeholders and [Nova variables](https://docs.nova.app/extensions/snippets/), e.g. `@copyright ${year} $AUTHOR_NAME`
+Each of these also accept tabbable `${placeholders}` and [Nova variables](https://docs.nova.app/extensions/snippets/#variables-available-to-the-extension-api), e.g. `@copyright ${year} $AUTHOR_NAME`
 
 
 ### Note

@@ -297,12 +297,22 @@ class CompletionProvider {
      */
     createCompletionItem(label, text, documentation) {
 
-        // NOTE:
-        // kind = '40' (bookmark icon) is not documented
-        // works in Nova 10.6 but may fail or give unexpected results in other versions
+        /**
+         * It would be nice to have our own icons for CompletionItems
+         * especially for bookmark comments. Unfortunately there's no
+         * official way to get Nova's bookmark icon. CompletionItemKind
+         * resolves to a number and using '40' gives us the bookmark
+         * icon at least in version 10.6.
+         *
+         * The CompletionItem prototype has a 'image' property briefly
+         * mentioned in docs. Can't get it to work either.
+         */
 
-        const kind = (label === "Bookmark") ? 40 : CompletionItemKind.StyleDirective;
-        const item = new CompletionItem(label, kind);
+        const item = new CompletionItem(label,
+            (label === "Bookmark")
+                ? CompletionItemKind.TagLink // better than nothing
+                : CompletionItemKind.StyleDirective
+        );
 
         if (this.cursorPosition !== null) {
             item.filterText = this.triggerChars;
@@ -365,6 +375,7 @@ class CompletionProvider {
 
     /**
      * Provide block comment
+     * @param   {string}         syntax - Document syntax
      * @returns {CompletionItem}
      */
     provideBlockComment(syntax) {
@@ -400,7 +411,9 @@ class CompletionProvider {
 
     /**
      * Provide matching @tags
-     * @returns {Array}
+     * @param   {Array}  matches - The matching doc tags from the parser
+     * @param   {string} syntax  - Document syntax
+     * @returns {Array}          - Array of CompletionItems
      */
     provideTags(matches, syntax) {
         const items = [];
@@ -445,6 +458,10 @@ class CompletionProvider {
             docBlock.push([""]);
 
             this.config.customTags.forEach(tag => {
+
+                // Implement $YEAR variable
+                tag = tag.replaceAll(/\$YEAR(?![A-Z])/g, new Date().getFullYear());
+
                 const match = regex.exec(tag);
                 if (!match) {
                     docBlock.push([tag]);
@@ -493,6 +510,7 @@ class CompletionProvider {
 
     /**
      * Provide bookmark comment
+     * @param   {string}         syntax - Document syntax
      * @returns {CompletionItem}
      */
     provideBookmarkComment(syntax) {
@@ -539,6 +557,13 @@ class CompletionProvider {
      * @returns {CompletionItem}
      */
     provideESLintComment() {
+
+        /**
+         * If only Nova provided a way to read the IssueCollections
+         * provided by other extensions, we could pre-fill the 'rule'
+         * placeholder with some meaningful values
+         */
+
         return this.createCompletionItem(
             "ESLint rule",
             "// eslint-disable-next-line ${0:rule}",
