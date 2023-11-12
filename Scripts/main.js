@@ -24,6 +24,7 @@ const config = {
     commentStyle : 0,
     commentStyleRuby : 1,
     extendComments : false,
+    bookmarkComments : false,
     ESLintComments : false
 };
 

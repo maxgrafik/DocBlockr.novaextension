@@ -283,7 +283,9 @@ class CompletionProvider {
         }
 
         // Provide Bookmark comment
-        completionItems.push(this.provideBookmarkComment(syntax));
+        if (this.config.bookmarkComments) {
+            completionItems.push(this.provideBookmarkComment(syntax));
+        }
 
         return completionItems;
     }

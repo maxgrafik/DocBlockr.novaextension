@@ -238,9 +238,16 @@
                     "default": false
                 },
                 {
+                    "key": "maxgrafik.DocBlockr.config.bookmarkComments",
+                    "title": "Bookmark Comments",
+                    "link": "https://help.panic.com/nova/symbols-sidebar/#placing-bookmarks",
+                    "type": "boolean",
+                    "default": false
+                },
+                {
                     "key": "maxgrafik.DocBlockr.config.ESLintComments",
-                    "title": "ESLint Comment",
-                    "description": "Just a convenience to quickly insert /* eslint-disable-next-line */ comments. Yes, I’m lazy ;)",
+                    "title": "ESLint Comments",
+                    "description": "Just a convenience to quickly insert \"eslint-disable-next-line\" comments. Yes, I’m lazy ;)",
                     "type": "boolean",
                     "default": false
                 }
