@@ -1,3 +1,8 @@
+## Version 0.9.3
+
+* Bugfix: Provide header block if editor is empty
+
+
 ## Version 0.9.2
 
 * Bugfix: Menu command *Insert DocBlock* and *Format DocBlock* should work again (has nobody noticed this was broken?).

@@ -148,12 +148,6 @@ class CompletionProvider {
             return [this.provideInlineComment()];
         }
 
-        const text = editor.getTextInRange(new Range(this.cursorPosition, editor.document.length));
-
-        // provide block comment if EOF
-        if (!text.match(/^[\t ]*(.+)$/m)) {
-            return [this.provideBlockComment(syntax)];
-        }
 
         let parser;
 
@@ -215,7 +209,7 @@ class CompletionProvider {
         const completionItems = [];
 
         // provide header block if start of file
-        const prePos  = Math.max(0, this.cursorPosition-3);
+        const prePos  = Math.max(0, this.cursorPosition-this.triggerChars.length);
         const preText = editor.getTextInRange(new Range(0, prePos)).trim();
 
         if (preText === "" || preText === "<?php") {
@@ -224,6 +218,15 @@ class CompletionProvider {
             );
         }
 
+        const text = editor.getTextInRange(new Range(this.cursorPosition, editor.document.length));
+
+        // provide block comment if EOF
+        if (text.trim() === "") {
+            completionItems.push(
+                this.provideBlockComment(syntax)
+            );
+            return completionItems;
+        }
 
         // split text into lines
         const lines = text.split(this.eol);
