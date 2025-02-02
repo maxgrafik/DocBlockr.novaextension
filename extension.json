@@ -3,7 +3,7 @@
     "name": "DocBlockr",
     "organization": "Hendrik Meinl",
     "description": "Nova extension to make writing documentation easier",
-    "version": "0.9.3",
+    "version": "0.9.4",
     "categories": ["completions", "commands"],
     "bugs": "https://github.com/maxgrafik/DocBlockr.novaextension/issues",
     "repository": "https://github.com/maxgrafik/DocBlockr.novaextension",

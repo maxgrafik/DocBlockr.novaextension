@@ -20,6 +20,7 @@ class CompletionProvider {
         this.indent = "";
         this.cursorPosition = 0;
         this.triggerChars = "";
+        this.trailingComment = "";
     }
 
     provideCompletionItems(editor, context) {
@@ -139,6 +140,16 @@ class CompletionProvider {
         this.indent = /^[\t ]*/.exec(context.line)[0];
         this.cursorPosition = context.position;
 
+        /**
+         * Bugfix 2025-02-02
+         * Catching a (possible) trailing comment completion
+         */
+        const currentLineRange = editor.getLineRangeForRange(new Range(
+            this.cursorPosition, this.cursorPosition
+        ));
+        const currentLine = editor.getTextInRange(currentLineRange).trim();
+        this.trailingComment = (/\s*\*\/$/m.exec(currentLine) || [""])[0];
+
         // return inline comment if line NOT only contains trigger chars
         if (
             ["javascript", "jsx", "typescript", "tsx"].includes(syntax)
@@ -235,7 +246,7 @@ class CompletionProvider {
         if (
             text.trim().match(/^\/(\*|\/)/) ||
             text.trim().match(/^#/) ||
-            (lines.length > 1 && lines[0].trim() === "" && lines[1].trim() === "")
+            (lines.length > 1 && lines[1].trim() === "")
         ) {
             completionItems.push(
                 this.provideBlockComment(syntax)
@@ -244,7 +255,15 @@ class CompletionProvider {
         } else {
 
             // get closest definition
-            const definition = parser.getDefinition(lines);
+
+            /**
+             * Bugfix 2025-02-02
+             * Skip first line: lines.slice(1)
+             *
+             * This should be the comment anyway. So if Nova (~v12)
+             * adds a comment completion, the parser won't choke on
+             */
+            const definition = parser.getDefinition(lines.slice(1));
 
             // provide block comment if no definition
             if (definition === "") {
@@ -319,15 +338,31 @@ class CompletionProvider {
                 : CompletionItemKind.StyleDirective
         );
 
+        /**
+         * this.cursorPosition is null only for tag completions
+         * e.g. @param in which case item.insertText is the tag.
+         * If not null, item.insertText is an empty string, because
+         * we use item.additionalTextEdits to insert the snippet
+         * (see below)
+         */
+
         if (this.cursorPosition !== null) {
             item.filterText = this.triggerChars;
         }
         item.insertText = (this.cursorPosition === null) ? text : "";
         item.insertTextFormat = InsertTextFormat.Snippet;
+
         if (documentation !== null) {
             item.documentation = documentation;
         }
+
         if (this.cursorPosition !== null) {
+
+            /**
+             * Set item.range to replace triggerChars
+             * Don't know how this actually works, but any range other than
+             * exactly the range of what we typed (triggerChars) is ignored
+             */
             item.range = new Range(
                 Math.max(0, this.cursorPosition-this.triggerChars.length),
                 this.cursorPosition
@@ -335,7 +370,7 @@ class CompletionProvider {
 
             /**
              * Working around Nova's weird indentation logic:
-             * We insert an empty string above (insertText), replacing '/**'
+             * Insert an empty string (insertText above), replacing triggerChars
              * and put the actual snippet into an additional TextEdit
              *
              * However, here's more weirdness:
@@ -351,16 +386,37 @@ class CompletionProvider {
              * handle this manual indentation correctly
              *
              * Nevertheless, I expect this to fail again anytime :P
+             *
+             * ----------------------------------------------------------------
+             * Bugfix 2025-02-02
+             * Adjusting for a (possible) trailing comment completion
+             *
+             * Here we are again! Nova now (~v12, not sure) may automatically
+             * add closing comment tags, which we need to get rid off.
+             * So instead of TextEdit.insert() we use TextEdit.replace() and
+             * replace the trailing comment completion (if any)
+             *
+             * Now waiting for the next Nova release to break DocBlockr :P
              */
 
-            const insertPosition = Math.max(0, this.cursorPosition);
-
             item.additionalTextEdits = [
-                TextEdit.insert(
-                    insertPosition,
+                TextEdit.replace(
+                    new Range(
+                        this.cursorPosition,
+                        this.cursorPosition + this.trailingComment.length
+                    ),
                     text.split(this.eol).join(this.eol + this.indent)
                 )
             ];
+
+            // Old code. Just in case ...
+            // const insertPosition = Math.max(0, this.cursorPosition);
+            // item.additionalTextEdits = [
+            //     TextEdit.insert(
+            //         insertPosition,
+            //         text.split(this.eol).join(this.eol + this.indent)
+            //     )
+            // ];
         }
 
         return item;

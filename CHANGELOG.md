@@ -1,3 +1,8 @@
+## Version 0.9.4
+
+* Fixed an issue where DocBlockr did not provide useful completions
+
+
 ## Version 0.9.3
 
 * Bugfix: Provide header block if editor is empty
